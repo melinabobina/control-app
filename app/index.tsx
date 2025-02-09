@@ -1,13 +1,47 @@
-import { StyleSheet, Text, View } from 'react-native'
-import { Slot, Stack } from 'expo-router';
-import { Link } from 'expo-router';
+import {ScrollView, Text, View } from 'react-native'
 import React from 'react'
+import { Redirect, router } from 'expo-router'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import HomepageButton from '@/components/HomeButton';
+import HeaderText from '@/components/HeaderText';
+import {icons} from '../constants'
+
 
 export default function App() {
   return (
-    <View className="flex-1 items-center justify-center bg-purple">  
-      <Text className="text-bold font-pblack">Hello World!</Text>
-      <Link href="/home" >Go to Home</Link>
-    </View>
+    <SafeAreaView className="bg-white h-full">  
+      <ScrollView contentContainerStyle={{height: '100%'}}>
+        <View className="items-center">
+          <HeaderText 
+            title="Neural Kinetic Sculpture"
+            header="Select your choice below"
+          />
+
+          <HomepageButton 
+            title="Create new configuration"
+            handlePress={() => router.push('./create-config')}
+            containerStyles="w-full mt-7" textStyles={undefined} 
+            isLoading={undefined} 
+            icon={icons.plus}
+            />
+
+          <HomepageButton 
+            title="Create new configuration"
+            handlePress={() => router.push('./create-config')}
+            containerStyles="w-full mt-7" textStyles={undefined} 
+            isLoading={undefined} 
+            icon={icons.plus}
+            />
+
+          <HomepageButton 
+            title="Create new configuration"
+            handlePress={() => router.push('./create-config')}
+            containerStyles="w-full mt-7" textStyles={undefined} 
+            isLoading={undefined} 
+            icon={icons.plus}
+            />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   )
 }
