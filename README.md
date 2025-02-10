@@ -46,3 +46,6 @@ To learn more about developing your project with Expo, look at the following res
 react-native icons:
 https://github.com/oblador/react-native-vector-icons?tab=readme-ov-file#installation
 
+## Attribution
+ include the attribution line on the credits section and/or in the description on the app store or website where your app or game is available.
+ www.freepik.com (for the brain image)
