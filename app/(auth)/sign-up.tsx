@@ -39,13 +39,13 @@ const SignUp = () => {
   return (
     <SafeAreaView className="bg-white h-full">
       <ScrollView>
-        <View className="w-full justify-center items-center min-h-[85vh] px-4 my-6">
+        <View className="w-full justify-center items-center min-h-[83vh] px-4 my-6">
           <Image source={images.neural}
             resizeMode='contain' className="w-[150px] h-[150px]"
           />
 
           <Text className="text-darkMauve text-xl font-semibold">
-            Login to the Neural Kinetic Sculpture app
+            Sign up for the Neural Kinetic Sculpture app
           </Text>
 
           <FormField
@@ -64,11 +64,22 @@ const SignUp = () => {
           />
 
           <LoginButton 
-            title="Sign in"
+            title="Sign up"
             handlePress={submit}
-            containerStyles="mt-7"
+            containerStyles="w-96 mt-7"
             isLoading={isSubmitting}
+            textStyles="text-white font-medium"
           />
+
+          <View className="justify-center pt-5 flex-row gap-2">
+            <Text className="text-lg text-gray-800 font-pregular">
+              Have an account already?
+            </Text>
+
+            <Link href="/sign-in" className="text-lg font-psemibold text-medMauve">
+              Sign in
+            </Link>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>

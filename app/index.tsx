@@ -2,7 +2,6 @@ import {ScrollView, Text, View, Image, TouchableOpacity } from 'react-native'
 import React from 'react'
 import { Redirect, router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import Header from '@/components/Header';
 import {images} from '../constants'
 
 
@@ -11,11 +10,8 @@ export default function App() {
     <SafeAreaView className="bg-white h-full">  
       <ScrollView contentContainerStyle={{height: '100%'}}>
         <View className="items-center w-full justify-center h-[85vh]">
-          <Header 
-            title="Neural Kinetic Sculpture"
-            header=""
-          />
-
+          <Text className="text-medPurple text-2xl font-bold mt-2">Neural Kinetic Sculpture</Text>
+          
           <Image
             source={images.neural}
             resizeMode="contain"
