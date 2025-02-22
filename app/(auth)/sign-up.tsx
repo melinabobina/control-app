@@ -1,10 +1,11 @@
-import { View, Text, ScrollView, Image } from 'react-native'
+import { Alert, View, Text, ScrollView, Image } from 'react-native'
 import React, { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { images } from '../../constants'
 import FormField from '../../components/FormField'
 import LoginButton from '../../components/LoginButton'
-import { Link } from 'expo-router'
+import { Link, router } from 'expo-router'
+import { supabase } from '../../lib/supabase'
 
 const SignUp = () => {
   const [form, setForm] = useState({
@@ -15,25 +16,28 @@ const SignUp = () => {
   const [isSubmitting, setSubmitting] = useState(false)
 
   const submit = async () => {
-    // if (form.email === "" || form.password === "") {
-    //   Alert.alert("Error", "Please fill in all fields");
-    // }
+    if (form.email === "" || form.password === "") {
+      Alert.alert("Error", "Please fill in all fields");
+    }
 
-    // setSubmitting(true);
+    setSubmitting(true);
 
-    // try {
-    //   await signIn(form.email, form.password);
-    //   const result = await getCurrentUser();
-    //   setUser(result);
-    //   setIsLogged(true);
+    try {
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+      })
 
-    //   Alert.alert("Success", "User signed in successfully");
-    //   router.replace("/home");
-    // } catch (error) {
-    //   Alert.alert("Error", error.message);
-    // } finally {
-    //   setSubmitting(false);
-    // }
+      Alert.alert("Success", "User signed in successfully");
+      router.replace("/home");
+    } catch (error) {
+      Alert.alert("Error", "Email already in use or please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

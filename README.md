@@ -49,6 +49,14 @@ https://github.com/oblador/react-native-vector-icons?tab=readme-ov-file#installa
 text input:
 npx elements-cli@latest add text-input
 
+range slider input:
+npm install --save @ptomasroos/react-native-multi-slider
+
+Supabase:
+npx expo install @supabase/supabase-js @react-native-async-storage/async-storage @rneui/themed react-native-url-polyfill
+
+.env file
+npm install react-native-config
 
 ## Attribution
  include the attribution line on the credits section and/or in the description on the app store or website where your app or game is available.

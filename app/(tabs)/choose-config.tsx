@@ -6,7 +6,7 @@ import Header from '@/components/Header';
 const ChooseConfig = () => {
   return (
     <SafeAreaView className="bg-white h-full">  
-    <ScrollView contentContainerStyle={{height: '100%'}}>
+    <ScrollView contentContainerStyle={{flexGrow: 1, paddingBottom: 20}}>
       <View className="items-center w-full justify-center">
         <Header 
           title="Choose your configuration"
