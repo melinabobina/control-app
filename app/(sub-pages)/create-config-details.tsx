@@ -1,10 +1,12 @@
-import { View, Text, SafeAreaView, ScrollView, Dimensions, Button, Modal, TouchableOpacity} from 'react-native'
-import React, { useState } from 'react'
+import { View, Text, Image, SafeAreaView, ScrollView, Dimensions, Modal, TouchableOpacity} from 'react-native'
+import React, { useEffect, useState } from 'react'
 import Header from '@/components/Header';
 import SignalButton from '@/components/SignalButton';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { TextInput } from "@/components/TextInput";
 import { supabase } from '@/lib/supabase';
+import { useConfigStore } from '../../store';
+import {icons} from '../../constants'
 import ColorPicker, { Panel1, Swatches, Preview, OpacitySlider, HueSlider } from 'reanimated-color-picker';
 
 
@@ -12,19 +14,49 @@ const CreateConfig2 = () => {
   const [selectedSignal, setSelectedSignal] = useState("Alpha (8 - 12 Hz)")
   const [rangeValues, setRangeValues] = useState([8, 12]); // Initial range values
   const screenWidth = Dimensions.get('window').width;
+  const { x, y } = useConfigStore();
+  const [selectedPanels, setSelectedPanels] = useState<Set<string>>(new Set());
 
   const [brightness, setBrightness] = useState("")
-  const [soundLvl, setSoundLvl] = useState("")
   const [speed, setSpeed] = useState("")
   const [direction, setDirection] = useState("")
   const [selectedColor, setSelectedColor] = useState('red') // Initial default color
 
   const [showModal, setShowModal] = useState(false);
 
+  const signalRanges = {
+    "Alpha (8 - 12 Hz)": [8, 12],
+    "Beta (12 - 30 Hz)": [12, 30],
+    "Gamma (30 - 50 Hz)": [30, 50],
+    "Theta (4 - 8 Hz)": [4, 8],
+    "Delta (<4 Hz)": [0, 4]
+  };
+
   const onSelectColor = ({ hex }) => {
     setSelectedColor(hex)  // Save the selected color
     console.log(hex)
   }
+
+  useEffect(() => {
+    setRangeValues(signalRanges[selectedSignal]);
+  }, [selectedSignal]);
+
+  const togglePanel = (row: number, col: number) => {
+    const panelId = `${row}-${col}`;
+    setSelectedPanels((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(panelId)) {
+        newSet.delete(panelId);
+      } else {
+        newSet.add(panelId);
+      }
+      return newSet;
+    });
+  };
+
+   const handlePress = async () => {
+      
+    }
 
   return (
     <SafeAreaView className="bg-white h-full">  
@@ -58,8 +90,8 @@ const CreateConfig2 = () => {
             <MultiSlider
               values={rangeValues}
               onValuesChange={(values) => setRangeValues(values)}
-              min={rangeValues[0]}
-              max={rangeValues[1]}
+              min={signalRanges[selectedSignal][0]}
+              max={signalRanges[selectedSignal][1]}
               step={1}
               allowOverlap={false}
               snapped
@@ -95,10 +127,27 @@ const CreateConfig2 = () => {
             </View>
           </View>
 
-          <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">Choose panels to configure:</Text>
-            <View className="mt-4 bg-medYellow w-11/12 py-3 rounded-3xl flex-wrap flex-row justify-center items-center">
-              
-            </View>
+          <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">
+            Choose panels to configure:
+          </Text>
+          <View className="mt-4 bg-medYellow w-11/12 py-3 rounded-3xl items-center">
+            {Array.from({ length: parseInt(y) || 0 }).map((_, row) => (
+              <View key={row} className="flex-row">
+                {Array.from({ length: parseInt(x) || 0 }).map((_, col) => {
+                  const isSelected = selectedPanels.has(`${row}-${col}`);
+                  return (
+                    <TouchableOpacity
+                      key={`${row}-${col}`}
+                      onPress={() => togglePanel(row, col)}
+                      className={`w-12 h-12 m-1 rounded-lg ${
+                        isSelected ? 'bg-darkPurple' : 'bg-lightPurple'
+                      }`}
+                    />
+                  );
+                })}
+              </View>
+            ))}
+          </View>
 
           <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">
             Configure your sculpture's animations:
@@ -111,17 +160,6 @@ const CreateConfig2 = () => {
                 value={brightness}
                 onChangeText={setBrightness}
                 placeholder="Enter brightness (%)"
-                keyboardType="numeric"
-              />
-            </View>
-
-            <View className="flex-row items-center space-x-4 w-full mb-4">
-              <Text className="text-darkPurple font-medium">Sound level:   </Text>
-              <TextInput 
-                className="bg-lightYellow px-4 py-2 rounded-lg flex-1"
-                value={soundLvl}
-                onChangeText={setSoundLvl}
-                placeholder="Enter sound level (%)"
                 keyboardType="numeric"
               />
             </View>
@@ -188,8 +226,28 @@ const CreateConfig2 = () => {
                 </Modal>
               </View>
             </View>
-            <Text className="text-darkPurple font-medium">Selected color:   </Text>
+            <Text className="text-darkPurple font-medium">Selected color: </Text>
+            <Text className="text-darkPurple font-medium">{selectedColor}</Text>
+            <View className="w-full px-2 flex-1">
+              <Text style={{ backgroundColor: selectedColor }} className="text-darkPurple font-medium py-2 rounded-md text-center w-full"></Text>
+            </View>
           </View>
+
+          <TouchableOpacity 
+            onPress={handlePress}
+            activeOpacity={0.7}
+            className={`mt-5 h-10 w-[340px] rounded-xl bg-lightPurple justify-center items-center`}>
+
+            <View className="flex-row items-center justify-between px-6">
+              <Text className="text-white font-medium items-center flex-1 text-center">Save your configuration</Text>
+                <Image
+                  source={icons.bookmark}
+                  tintColor="white"
+                  resizeMode="contain"
+                  className="w-5 h-5"
+                />
+            </View>
+          </TouchableOpacity>
       </View>
     </ScrollView>
   </SafeAreaView>

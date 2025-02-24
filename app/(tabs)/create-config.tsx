@@ -1,15 +1,17 @@
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Image } from 'react-native'
-import React, { useState } from 'react'
+import { useState } from 'react'
 import Header from '@/components/Header';
 import { TextInput } from "@/components/TextInput";
 import { router } from 'expo-router';
 import { icons } from '@/constants';
+import { useConfigStore } from '../../store';
+
 
 const CreateConfig = () => {
   const [name, setName] = useState("");
   const [height, setHeight] = useState("");
-  const [x, setX] = useState("");
-  const [y, setY] = useState("");
+  const { x, y, setX, setY } = useConfigStore();
+
 
 
 

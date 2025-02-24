@@ -58,6 +58,13 @@ npx expo install @supabase/supabase-js @react-native-async-storage/async-storage
 .env file
 npm install react-native-config
 
+color picker:
+https://www.npmjs.com/package/reanimated-color-picker
+
+zustand:
+npm install zustand
+
+
 ## Attribution
  include the attribution line on the credits section and/or in the description on the app store or website where your app or game is available.
  www.freepik.com (for the brain image)
