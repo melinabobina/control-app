@@ -8,7 +8,7 @@ const HomepageButton = ({ title, handlePress, containerStyles, textStyles, isLoa
     <TouchableOpacity 
         onPress={handlePress}
         activeOpacity={0.7}
-        className={`h-52 w-[340px] rounded-3xl ${background} ${containerStyles} ${isLoading ? 'opacity-50' : ''}`}
+        className={`h-52 w-[345px] rounded-3xl ${background} ${containerStyles} ${isLoading ? 'opacity-50' : ''}`}
     >
       <View className="h-full">
         <View className="pl-8 pt-12">

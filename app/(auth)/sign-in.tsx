@@ -5,9 +5,11 @@ import { images } from '../../constants'
 import FormField from '../../components/FormField'
 import LoginButton from '../../components/LoginButton'
 import { supabase } from '../../lib/supabase'
-import { Link, router } from 'expo-router'
+import { useRouter } from 'expo-router';
 
 const SignIn = () => {
+  const router = useRouter();
+
   const [form, setForm] = useState({
     email: '',
     password: ''
@@ -87,4 +89,4 @@ const SignIn = () => {
   )
 }
 
-export default SignIn
+export default SignIn;

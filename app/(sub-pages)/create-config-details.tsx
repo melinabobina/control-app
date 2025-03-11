@@ -236,7 +236,7 @@ const CreateConfig2 = () => {
           <TouchableOpacity 
             onPress={handlePress}
             activeOpacity={0.7}
-            className={`mt-5 h-10 w-[340px] rounded-xl bg-lightPurple justify-center items-center`}>
+            className={`mt-5 h-10 w-[340px] rounded-xl bg-darkPurple justify-center items-center`}>
 
             <View className="flex-row items-center justify-between px-6">
               <Text className="text-white font-medium items-center flex-1 text-center">Save your configuration</Text>

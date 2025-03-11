@@ -64,6 +64,9 @@ https://www.npmjs.com/package/reanimated-color-picker
 zustand:
 npm install zustand
 
+modal:
+npm i react-native-modal
+
 
 ## Attribution
  include the attribution line on the credits section and/or in the description on the app store or website where your app or game is available.

@@ -12,9 +12,6 @@ const CreateConfig = () => {
   const [height, setHeight] = useState("");
   const { x, y, setX, setY } = useConfigStore();
 
-
-
-
   return (
     <SafeAreaView className="bg-white h-full">  
     <ScrollView contentContainerStyle={{flexGrow: 1, paddingBottom: 20}}>
@@ -23,6 +20,26 @@ const CreateConfig = () => {
           title="Create a new configuration"
           header="Add and edit new ranges below"
         />
+
+<TouchableOpacity
+          activeOpacity={0.7}
+          className="bg-darkPurple w-96 items-center justify-center h-12 rounded-2xl mt-4"
+          onPress={() => router.push('/choose-config')}
+        >
+          <View className="flex-row items-center justify-between w-full px-5">
+            <View className="flex-1 items-center">
+              <Text className="text-white font-medium">
+                Save your configuration
+              </Text>
+            </View>
+            <Image
+              source={icons.bookmark}
+              resizeMode="contain"
+              tintColor="white"
+              className="w-6 h-6"
+            />
+          </View>
+        </TouchableOpacity>
 
         <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">Name your configuration:</Text>
         <View className="mt-4 bg-medYellow w-11/12 h-24 py-3 rounded-3xl justify-center items-center">
@@ -82,29 +99,8 @@ const CreateConfig = () => {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          activeOpacity={0.7}
-          className="bg-darkPurple w-96 items-center justify-center h-12 rounded-2xl mt-4"
-          onPress={() => router.push('/choose-config')}
-        >
-          <View className="flex-row items-center justify-between w-full px-5">
-            <View className="flex-1 items-center">
-              <Text className="text-white font-medium">
-                Save your configuration
-              </Text>
-            </View>
-            <Image
-              source={icons.bookmark}
-              resizeMode="contain"
-              tintColor="white"
-              className="w-6 h-6"
-            />
-          </View>
-        </TouchableOpacity>
-
         <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">Current ranges:</Text>
 
-  
       </View>
     </ScrollView>
   </SafeAreaView>

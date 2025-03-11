@@ -1,9 +1,8 @@
 import {ScrollView, Text, View, Image, TouchableOpacity } from 'react-native'
 import React from 'react'
-import { Redirect, router } from 'expo-router'
+import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {images} from '../constants'
-
 
 export default function App() {
   return (
@@ -30,8 +29,8 @@ export default function App() {
           <TouchableOpacity
             activeOpacity={0.7}
             className="bg-lightYellow w-80 items-center justify-center h-12 rounded-lg"
-            onPress={() => router.push('/sign-in')}
-          >
+            onPress={() => router.push('/home')}
+            >
             <Text className="text-darkMauve font-medium">
               Login
             </Text>
@@ -41,8 +40,8 @@ export default function App() {
             <TouchableOpacity
               activeOpacity={0.7}
               className="bg-darkYellow w-80 items-center justify-center h-12 rounded-lg"
-              onPress={() => router.push('./home')}
-            >
+              onPress={() => router.push('/sign-up')}
+              >
               <Text className="text-darkMauve font-medium">
                 Sign up
               </Text>
