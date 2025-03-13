@@ -1,21 +1,20 @@
 import { create } from 'zustand';
 
-interface ConfigState {
-  x: string;
-  y: string;
-  setX: (value: string) => void;
-  setY: (value: string) => void;
-  setName: (value: string) => void;
-  setHeight: (value: string) => void;
-}
-
-export const useConfigStore = create<ConfigState>((set) => ({
-  x: '',
-  y: '',
+export const useConfigStore = create((set) => ({
   name: '',
   height: '',
-  setX: (value) => set({ x: value }),
-  setY: (value) => set({ y: value }),
-  setName: (value) => set({ name: value }),
-  setHeight: (value) => set({ height: value }),
+  x: '',
+  y: '',
+  
+  setName: (name) => set({ name }),
+  setHeight: (height) => set({ height }),
+  setX: (x) => set({ x }),
+  setY: (y) => set({ y }),
+  
+  resetConfig: () => set({
+    name: '',
+    height: '',
+    x: '',
+    y: '',
+  }),
 }));

@@ -9,20 +9,30 @@ import ConfigRange from '@/components/ConfigRange';
 import { supabase } from '@/lib/supabase';
 
 const CreateConfig = () => {
-  const { x, y, name, height, setX, setY, setName, setHeight } = useConfigStore();
+  const { x, y, name, height, setX, setY, setName, setHeight, resetConfig } = useConfigStore();
   const [isFormValid, setIsFormValid] = useState(false);
   const [fetchError, setFetchError] = useState('');
   const [data, setData] = useState(null);
+  const [hasPanelLock, setHasPanelLock] = useState(false);
 
   useEffect(() => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (data && data.length > 0) {
+      setHasPanelLock(true);
+    } else {
+      setHasPanelLock(false);
+    }
+  }, [data]);
+
   const fetchData = async () => {
     try {
       const { data, error } = await supabase
         .from('config_settings')
-        .select('*');
+        .select('*')
+        .is('config_id', null);
   
       if (error) {
         setFetchError('Could not fetch the data');
@@ -56,13 +66,14 @@ const CreateConfig = () => {
         throw error;
       }
 
-      fetchData();
+      await fetchData();
       Alert.alert("Success", "Configuration deleted successfully");
     } catch (error) {
       console.error('Error deleting configuration:', error);
       Alert.alert("Error", "Failed to delete configuration: " + error.message);
     }
   };
+  
   useEffect(() => {
     const formIsValid = 
       name.trim() !== "" && 
@@ -73,9 +84,44 @@ const CreateConfig = () => {
     setIsFormValid(formIsValid);
   }, [name, height, x, y]);
 
-  const handleSavePress = () => {
+  const handleSavePress = async () => {
     if (isFormValid) {
-      router.push('/choose-config');
+      try {
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError;
+
+        const userId = userData?.user?.id;
+        if (!userId) throw new Error("User ID not found");
+
+        const configData = {
+          user_id: userId,
+          config_name: name,
+          starting_height: height,
+          panels_x: x,
+          panels_y: y,
+          favorite: false,
+        };
+  
+        const { data, error } = await supabase
+          .from('configs')
+          .insert([configData])
+          .select('id')
+          .single();
+  
+        if (error) throw error;
+  
+        const newConfigId = data.id;
+        await updateConfigSettings(newConfigId);
+        
+        // Reset the form data after successful save
+        resetConfig();
+        await fetchData();
+        
+        router.push('/choose-config');
+      } catch (error) {
+        console.error('Error saving configuration:', error);
+        Alert.alert('Error', 'Failed to save configuration');
+      }
     } else {
       Alert.alert(
         "Missing Information",
@@ -84,7 +130,22 @@ const CreateConfig = () => {
       );
     }
   };
-
+  
+  const updateConfigSettings = async (configId: number) => {
+    try {
+      const { error } = await supabase
+        .from('config_settings')
+        .update({ config_id: configId })
+        .is('config_id', null);
+  
+      if (error) throw error;
+  
+      console.log("Successfully updated config_settings");
+    } catch (error) {
+      console.error("Error updating config_settings:", error);
+    }
+  };
+  
   const handleAddRangePress = () => {
     if (isFormValid) {
       router.push('/(sub-pages)/create-config-details');
@@ -92,6 +153,16 @@ const CreateConfig = () => {
       Alert.alert(
         "Missing Information",
         "Please fill out all required fields (name, starting height, and number of panels) before adding a range.",
+        [{ text: "OK" }]
+      );
+    }
+  };
+
+  const showPanelLockMessage = () => {
+    if (hasPanelLock) {
+      Alert.alert(
+        "Cannot Edit Panels",
+        "You cannot change the number of panels after adding ranges. Delete all ranges first to modify panel dimensions.",
         [{ text: "OK" }]
       );
     }
@@ -148,22 +219,32 @@ const CreateConfig = () => {
             />
           </View>
 
-          <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">Enter number of panels:</Text>
-          <View className="mt-4 bg-medYellow w-11/12 h-48 py-3 rounded-3xl justify-center items-center">
+          <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">
+            Enter number of panels:
+          </Text>
+          {hasPanelLock && (
+              <Text className="text-red-500 text-med self-start ml-6"> (Locked - Delete all ranges to edit)</Text>
+          )}
+
+          <View className={`mt-4 ${hasPanelLock ? 'bg-gray-200' : 'bg-medYellow'} w-11/12 h-48 py-3 rounded-3xl justify-center items-center`}>
             <Text className="text-darkPurple px-14 pb-2 text-center font-medium">
               Enter the number of panels in the format X by Y, such as a 3x3 array.
             </Text>
             <TextInput 
               value={x}
-              onChangeText={setX}
+              onChangeText={hasPanelLock ? () => showPanelLockMessage() : setX}
               placeholder="Enter x here"
               keyboardType="numeric"
+              editable={!hasPanelLock}
+              style={hasPanelLock ? {color: 'gray'} : {}}
             />
             <TextInput 
               value={y}
-              onChangeText={setY}
+              onChangeText={hasPanelLock ? () => showPanelLockMessage() : setY}
               placeholder="Enter y here"
               keyboardType="numeric"
+              editable={!hasPanelLock}
+              style={hasPanelLock ? {color: 'gray'} : {}}
             />
           </View>
 

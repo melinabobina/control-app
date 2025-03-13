@@ -3,12 +3,13 @@ import React from 'react';
 import {icons} from '../constants'
 
 
-const HomepageButton = ({ title, handlePress, containerStyles, textStyles, isLoading, icon, background}) => {
+const HomepageButton = ({ title, handlePress, containerStyles, textStyles, isLoading, icon, background }) => {
   return (
     <TouchableOpacity 
-        onPress={handlePress}
-        activeOpacity={0.7}
-        className={`h-52 w-[350px] rounded-3xl ${background} ${containerStyles} ${isLoading ? 'opacity-50' : ''}`}
+      onPress={handlePress}
+      activeOpacity={0.7}
+      className={`h-52 rounded-3xl ${background} ${containerStyles} ${isLoading ? 'opacity-50' : ''}`}
+      style={{ width: 350 }}
     >
       <View className="h-full">
         <View className="pl-8 pt-12">
@@ -21,7 +22,7 @@ const HomepageButton = ({ title, handlePress, containerStyles, textStyles, isLoa
         </View>
         
         <View className="flex-row items-center justify-between pl-8 pr-8 pt-12">
-          <Text className={`text-white text-xl font-bold  ${textStyles}`}>{title}</Text>
+          <Text className={`text-white text-xl font-bold ${textStyles}`}>{title}</Text>
           <Image
             source={icons.rightArrow}
             tintColor="#F4E8D0"

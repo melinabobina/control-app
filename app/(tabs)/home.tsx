@@ -10,7 +10,7 @@ const Home = () => {
   return (
     <SafeAreaView className="bg-white h-full">  
     <ScrollView contentContainerStyle={{flexGrow: 1, paddingBottom: 20}}>
-      <View className="items-center w-full justify-center">
+      <View className="items-center justify-center">
         <Header 
           title="Neural Kinetic Sculpture"
           header="Select your choice below"

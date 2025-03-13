@@ -42,7 +42,7 @@ const ConfigRange = ({ id, signal, lower_range, upper_range, color, onDelete, on
       >
         <View className="flex-row items-center justify-between w-full">
           <Text className="text-white font-bold flex-1 text-center" numberOfLines={1} ellipsizeMode="tail">
-            {signal} ({lower_range}-{upper_range} Hz)
+            {signal}
           </Text>
           <TouchableOpacity 
             className="pl-2 pr-3" 
