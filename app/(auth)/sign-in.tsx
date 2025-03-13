@@ -5,7 +5,7 @@ import { images } from '../../constants'
 import FormField from '../../components/FormField'
 import LoginButton from '../../components/LoginButton'
 import { supabase } from '../../lib/supabase'
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 
 const SignIn = () => {
   const router = useRouter();

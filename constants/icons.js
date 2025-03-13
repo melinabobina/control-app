@@ -13,6 +13,7 @@ import eye from "../assets/icons/eye.png";
 import play from "../assets/icons/play.png";
 import config from "../assets/icons/config.png";
 import tabMenu from "../assets/icons/tabMenu.png";
+import trash from "../assets/icons/trash.png";
 
 export default {
   play,
@@ -30,4 +31,5 @@ export default {
   eye,
   config,
   tabMenu,
+  trash
 };

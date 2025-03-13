@@ -19,7 +19,14 @@ const Header = ({ title, header }) => {
   };
 
   const logOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut()
 
+      Alert.alert("Success", "User signed out successfully");
+      router.replace("/");
+    } catch (error) {
+      Alert.alert("Error", "Logout unsuccessful, please try again");
+    }
   };
 
   const navigateTo = (screen) => {
@@ -107,16 +114,16 @@ const Header = ({ title, header }) => {
                 className="w-4 h-4 tint-white"
               />
 
-            <Modal isVisible={isModalVisible} className="bg-lightPurple my-96 px-8 rounded-2xl">
+            <Modal isVisible={isModalVisible} className="bg-white my-96 px-8 rounded-2xl">
               <View className="flex-col items-center mb-20 relative">
                 <View className="absolute top-0 right-0 mt-10">
                   <TouchableOpacity onPress={toggleModal}>
-                    <Text className="text-white text-xl">X</Text>
+                    <Text className="text-darkMauve text-xl">X</Text>
                   </TouchableOpacity>
                 </View>
 
                 <View className="w-full h-full flex items-center justify-center mt-10">
-                  <TouchableOpacity onPress={logOut} className="bg-darkPurple rounded-xl py-3 px-6">
+                  <TouchableOpacity onPress={logOut} className="bg-medMauve rounded-xl py-3 px-6">
                     <Text className="text-white text-center">Log out of your account</Text>
                   </TouchableOpacity>
                 </View>
