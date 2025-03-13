@@ -2,22 +2,31 @@ import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Image, Alert } 
 import { useState, useEffect } from 'react'
 import Header from '@/components/Header';
 import { TextInput } from "@/components/TextInput";
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { icons } from '@/constants';
 import { useConfigStore } from '../../store';
 import ConfigRange from '@/components/ConfigRange';
 import { supabase } from '@/lib/supabase';
 
 const CreateConfig = () => {
+  const { configId } = useLocalSearchParams();
   const { x, y, name, height, setX, setY, setName, setHeight, resetConfig } = useConfigStore();
   const [isFormValid, setIsFormValid] = useState(false);
   const [fetchError, setFetchError] = useState('');
   const [data, setData] = useState(null);
   const [hasPanelLock, setHasPanelLock] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    resetConfig();
+    
+    if (configId) {
+      setIsEditMode(true);
+      loadExistingConfig(configId);
+    }
+    
+    fetchConfigSettings();
+  }, [configId]);
 
   useEffect(() => {
     if (data && data.length > 0) {
@@ -27,12 +36,45 @@ const CreateConfig = () => {
     }
   }, [data]);
 
-  const fetchData = async () => {
+  const loadExistingConfig = async (id) => {
     try {
       const { data, error } = await supabase
-        .from('config_settings')
+        .from('configs')
         .select('*')
-        .is('config_id', null);
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        console.error('Error loading configuration:', error);
+        Alert.alert('Error', 'Failed to load configuration');
+        return;
+      }
+
+      if (data) {
+        setName(data.config_name || '');
+        setHeight(data.starting_height ? data.starting_height.toString() : '');
+        setX(data.panels_x ? data.panels_x.toString() : '');
+        setY(data.panels_y ? data.panels_y.toString() : '');
+      }
+    } catch (error) {
+      console.error('Exception loading configuration:', error);
+      Alert.alert('Error', 'An unexpected error occurred while loading the configuration');
+    }
+  };
+
+  const fetchConfigSettings = async () => {
+    try {
+      let query = supabase
+        .from('config_settings')
+        .select('*');
+      
+      if (configId) {
+        query = query.eq('config_id', configId);
+      } else {
+        query = query.is('config_id', null);
+      }
+  
+      const { data, error } = await query;
   
       if (error) {
         setFetchError('Could not fetch the data');
@@ -46,7 +88,7 @@ const CreateConfig = () => {
         setFetchError('');
       }
     } catch (err) {
-      console.error('Error fetching configurations:', err);
+      console.error('Error fetching configuration settings:', err);
       setFetchError('An unexpected error occurred');
     }
   };
@@ -66,11 +108,11 @@ const CreateConfig = () => {
         throw error;
       }
 
-      await fetchData();
-      Alert.alert("Success", "Configuration deleted successfully");
+      await fetchConfigSettings();
+      Alert.alert("Success", "Configuration setting deleted successfully");
     } catch (error) {
-      console.error('Error deleting configuration:', error);
-      Alert.alert("Error", "Failed to delete configuration: " + error.message);
+      console.error('Error deleting configuration setting:', error);
+      Alert.alert("Error", "Failed to delete configuration setting: " + error.message);
     }
   };
   
@@ -83,6 +125,21 @@ const CreateConfig = () => {
     
     setIsFormValid(formIsValid);
   }, [name, height, x, y]);
+
+  const updateConfigSettings = async (configId) => {
+    try {
+      const { error } = await supabase
+        .from('config_settings')
+        .update({ config_id: configId })
+        .is('config_id', null);
+  
+      if (error) throw error;
+  
+      console.log("Successfully updated config_settings");
+    } catch (error) {
+      console.error("Error updating config_settings:", error);
+    }
+  };
 
   const handleSavePress = async () => {
     if (isFormValid) {
@@ -99,23 +156,36 @@ const CreateConfig = () => {
           starting_height: height,
           panels_x: x,
           panels_y: y,
-          favorite: false,
+          favorite: isEditMode ? undefined : false,
         };
   
-        const { data, error } = await supabase
-          .from('configs')
-          .insert([configData])
-          .select('id')
-          .single();
-  
-        if (error) throw error;
-  
-        const newConfigId = data.id;
-        await updateConfigSettings(newConfigId);
+        let savedConfigId = null;
+
+        if (isEditMode) {
+          // Update existing config
+          const { error } = await supabase
+            .from('configs')
+            .update(configData)
+            .eq('id', configId);
+          
+          if (error) throw error;
+          savedConfigId = configId;
+        } else {
+          // Create new config
+          const { data, error } = await supabase
+            .from('configs')
+            .insert([configData])
+            .select('id')
+            .single();
+      
+          if (error) throw error;
+          savedConfigId = data.id;
+          await updateConfigSettings(savedConfigId);
+        }
         
         // Reset the form data after successful save
         resetConfig();
-        await fetchData();
+        await fetchConfigSettings();
         
         router.push('/choose-config');
       } catch (error) {
@@ -131,24 +201,16 @@ const CreateConfig = () => {
     }
   };
   
-  const updateConfigSettings = async (configId: number) => {
-    try {
-      const { error } = await supabase
-        .from('config_settings')
-        .update({ config_id: configId })
-        .is('config_id', null);
-  
-      if (error) throw error;
-  
-      console.log("Successfully updated config_settings");
-    } catch (error) {
-      console.error("Error updating config_settings:", error);
-    }
-  };
-  
   const handleAddRangePress = () => {
     if (isFormValid) {
-      router.push('/(sub-pages)/create-config-details');
+      if (isEditMode) {
+        router.push({
+          pathname: "/(sub-pages)/create-config-details",
+          params: { configId } 
+        });
+      } else {
+        router.push('/(sub-pages)/create-config-details');
+      }
     } else {
       Alert.alert(
         "Missing Information",
@@ -173,8 +235,8 @@ const CreateConfig = () => {
       <ScrollView contentContainerStyle={{flexGrow: 1, paddingBottom: 20}}>
         <View className="items-center w-full justify-center">
           <Header 
-            title="Create a new configuration"
-            header="Add and edit new ranges below"
+            title={isEditMode ? "Edit configuration" : "Create a new configuration"}
+            header={isEditMode ? "Edit configuration details below" : "Add and edit new ranges below"}
           />
 
           <TouchableOpacity
@@ -185,7 +247,7 @@ const CreateConfig = () => {
             <View className="flex-row items-center justify-between w-full px-5">
               <View className="flex-1 items-center">
                 <Text className="text-white font-medium">
-                  Save your configuration
+                  {isEditMode ? "Update configuration" : "Save your configuration"}
                 </Text>
               </View>
               <Image
@@ -287,7 +349,10 @@ const CreateConfig = () => {
                   onPress={() => {
                     router.push({
                       pathname: "/(sub-pages)/create-config-details",
-                      params: { configId: config.id }
+                      params: { 
+                        configId: isEditMode ? configId : null,
+                        settingId: config.id 
+                      }
                     });
                   }}
                 />

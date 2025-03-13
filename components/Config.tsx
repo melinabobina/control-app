@@ -1,9 +1,9 @@
 import { View, Text, TouchableOpacity, Image, Alert } from 'react-native'
 import { icons } from '@/constants';
 import React, { useState } from 'react'
-import { supabase } from '@/lib/supabase'; // Make sure you have your Supabase client imported
+import { supabase } from '@/lib/supabase';
 
-const Config = ({id, name, date, favorite, onDelete, onFavoriteChange}) => {
+const Config = ({id, name, date, favorite, onDelete, onFavoriteChange, onPress}) => {
     const [isFavorite, setIsFavorite] = useState(favorite);
 
     const handleDeletePress = () => {
@@ -31,7 +31,6 @@ const Config = ({id, name, date, favorite, onDelete, onFavoriteChange}) => {
 
     const updateFavorite = async () => {
         try {
-            // Toggle the favorite status locally first for immediate feedback
             const newFavoriteStatus = !isFavorite;
             setIsFavorite(newFavoriteStatus);
             
@@ -62,6 +61,7 @@ const Config = ({id, name, date, favorite, onDelete, onFavoriteChange}) => {
             <TouchableOpacity 
                 activeOpacity={0.7}
                 className="h-36 w-[350px] rounded-3xl bg-darkPurple"
+                onPress={onPress}
             >
                 <View className="h-full p-5">
                     <View className="flex-row justify-between items-center">

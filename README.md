@@ -1,4 +1,4 @@
-# Welcome to your Expo app 👋
+# Welcome to the Neural Kinetic Sculpture app 👋
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
@@ -70,4 +70,5 @@ npm i react-native-modal
 
 ## Attribution
  include the attribution line on the credits section and/or in the description on the app store or website where your app or game is available.
+ 
  www.freepik.com (for the brain image)

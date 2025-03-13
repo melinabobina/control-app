@@ -1,5 +1,5 @@
 import { View, Text, Image, TouchableOpacity, Button, Alert } from 'react-native'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { icons } from '../constants'
 import Modal from 'react-native-modal'
 import { supabase } from '../lib/supabase'
@@ -9,7 +9,21 @@ import {images} from '../constants'
 const Header = ({ title, header }) => {
   const [isModalVisible, setModalVisible] = useState(false);
   const [isModalVisible2, setModalVisible2] = useState(false);
+  const [email, setEmail] = useState(null);
 
+  useEffect(() => {
+    async function fetchUserEmail() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        setEmail(user?.email);
+      } catch (error) {
+        console.error('Error fetching user email:', error);
+      } finally {
+      }
+    }
+    fetchUserEmail();
+  }, []);
+  
   const toggleModal = () => {
     setModalVisible(!isModalVisible);
   };
@@ -123,6 +137,11 @@ const Header = ({ title, header }) => {
                 </View>
 
                 <View className="w-full h-full flex items-center justify-center mt-10">
+                    {email ? (
+                      <Text className="text-black font-bold pb-3">Email: {email}</Text>
+                    ) : (
+                      <Text className="text-black font-bold">No user logged in.</Text>
+                    )}
                   <TouchableOpacity onPress={logOut} className="bg-medMauve rounded-xl py-3 px-6">
                     <Text className="text-white text-center">Log out of your account</Text>
                   </TouchableOpacity>

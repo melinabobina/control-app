@@ -12,8 +12,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 const CreateConfigDetails = () => {
   const params = useLocalSearchParams();
+  // Extract both configId and settingId correctly from params
   const configId = params.configId;
-  const isEditing = !!configId;
+  const settingId = params.settingId;
+  const isEditing = !!settingId; // Now we determine editing mode by settingId
 
   const [selectedSignal, setSelectedSignal] = useState("Alpha (8 - 12 Hz)")
   const [rangeValues, setRangeValues] = useState([8, 12]); // Initial range values
@@ -43,13 +45,13 @@ const CreateConfigDetails = () => {
 
   // Fetch existing config data if editing
   useEffect(() => {
-    if (isEditing && configId) {
+    if (isEditing && settingId) {
       const fetchConfigData = async () => {
         try {
           const { data, error } = await supabase
             .from('config_settings')
             .select('*')
-            .eq('id', configId)
+            .eq('id', settingId) // Use settingId instead of configId
             .single();
       
           if (error) {
@@ -91,7 +93,7 @@ const CreateConfigDetails = () => {
     } else {
       setIsLoading(false);
     }
-  }, [configId, isEditing]);
+  }, [settingId, isEditing]);
 
   const onSelectColor = ({ hex }) => {
     setSelectedColor(hex)  // Save the selected color
@@ -190,14 +192,15 @@ const CreateConfigDetails = () => {
           brightness: parseFloat(brightness),
           speed: parseFloat(speed),
           direction: direction.toLowerCase(),
-          color: selectedColor
+          color: selectedColor,
+          config_id: configId || null // Make sure to pass the configId
         };
         
         if (isEditing) {
           operation = supabase
             .from('config_settings')
             .update(configData)
-            .eq('id', configId);
+            .eq('id', settingId); // Use settingId for editing
         } else {
           operation = supabase
             .from('config_settings')
@@ -212,7 +215,10 @@ const CreateConfigDetails = () => {
         Alert.alert(
           "Success", 
           `Configuration ${isEditing ? 'updated' : 'saved'} successfully`,
-          [{ text: "OK", onPress: () => router.replace("/create-config") }]
+          [{ text: "OK", onPress: () => router.replace({
+            pathname: "/create-config",
+            params: configId ? { configId } : {} // Pass configId if it exists
+          })}]
         );
       } catch (error) {
         console.error('Error saving configuration:', error);
