@@ -30,7 +30,7 @@ const Home = () => {
           handlePress={() => router.push('./choose-config')}
           containerStyles="w-full mt-7" textStyles={undefined} 
           isLoading={undefined} 
-          icon={icons.plus}
+          icon={icons.config}
           background="bg-medMauve"
           />
 
@@ -39,7 +39,7 @@ const Home = () => {
           handlePress={() => router.push('./record-archive')}
           containerStyles="w-full mt-7" textStyles={undefined} 
           isLoading={undefined} 
-          icon={icons.plus}
+          icon={icons.bookmark}
           background="bg-darkMauve"
           />
       </View>

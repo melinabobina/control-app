@@ -13,7 +13,7 @@ const ConfigRange = ({ id, signal, lower_range, upper_range, color, onDelete, on
   const handleDeletePress = () => {
     Alert.alert(
       "Confirm Deletion",
-      `Are you sure you want to delete ${signal} (${lower_range}-${upper_range} Hz)?`,
+      `Are you sure you want to delete ${signal} Hz)?`,
       [
         {
           text: "Cancel",

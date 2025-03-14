@@ -12,10 +12,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 const CreateConfigDetails = () => {
   const params = useLocalSearchParams();
-  // Extract both configId and settingId correctly from params
   const configId = params.configId;
   const settingId = params.settingId;
-  const isEditing = !!settingId; // Now we determine editing mode by settingId
+  const isEditing = !!settingId; 
 
   const [selectedSignal, setSelectedSignal] = useState("Alpha (8 - 12 Hz)")
   const [rangeValues, setRangeValues] = useState([8, 12]); // Initial range values
@@ -43,7 +42,6 @@ const CreateConfigDetails = () => {
     "Delta (<4 Hz)": [0, 4]
   };
 
-  // Fetch existing config data if editing
   useEffect(() => {
     if (isEditing && settingId) {
       const fetchConfigData = async () => {
@@ -51,7 +49,7 @@ const CreateConfigDetails = () => {
           const { data, error } = await supabase
             .from('config_settings')
             .select('*')
-            .eq('id', settingId) // Use settingId instead of configId
+            .eq('id', settingId) 
             .single();
       
           if (error) {
@@ -61,14 +59,12 @@ const CreateConfigDetails = () => {
       
           if (data) {
             console.log('Retrieved config data:', data);
-            // Safely extract values with fallbacks
             setSelectedSignal(data.selectedSignal || data.signal || data.setting_name || "Alpha (8 - 12 Hz)");
             setRangeValues([
               data.rangeValues_0 !== undefined ? data.rangeValues_0 : (data.lower_range || 8),
               data.rangeValues_1 !== undefined ? data.rangeValues_1 : (data.upper_range || 12)
             ]);
             
-            // Handle panels data
             if (data.selectedPanels || data.selected_panels) {
               const panelsArray = data.selectedPanels || data.selected_panels;
               if (Array.isArray(panelsArray)) {
@@ -96,7 +92,7 @@ const CreateConfigDetails = () => {
   }, [settingId, isEditing]);
 
   const onSelectColor = ({ hex }) => {
-    setSelectedColor(hex)  // Save the selected color
+    setSelectedColor(hex) 
     console.log(hex)
   }
 
@@ -106,7 +102,6 @@ const CreateConfigDetails = () => {
     }
   }, [selectedSignal]);
 
-  // Handle brightness validation (0-100)
   const handleBrightnessChange = (text) => {
     setBrightness(text);
     const numValue = parseFloat(text);
@@ -122,7 +117,6 @@ const CreateConfigDetails = () => {
     }
   };
 
-  // Handle speed validation (0-1.5)
   const handleSpeedChange = (text) => {
     setSpeed(text);
     const numValue = parseFloat(text);
@@ -138,7 +132,6 @@ const CreateConfigDetails = () => {
     }
   };
 
-  // Handle direction validation (only "up" or "down")
   const handleDirectionChange = (text) => {
     setDirection(text);
     const lowerText = text.toLowerCase().trim();
@@ -152,7 +145,6 @@ const CreateConfigDetails = () => {
     }
   };
 
-  // Validate form inputs
   useEffect(() => {
     const formIsValid = 
       brightness.trim() !== "" && 

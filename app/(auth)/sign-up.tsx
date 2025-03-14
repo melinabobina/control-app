@@ -31,7 +31,6 @@ const SignUp = () => {
         password: form.password,
       })
 
-      Alert.alert("Success", "User signed in successfully");
       router.replace("/home");
     } catch (error) {
       Alert.alert("Error", "Email already in use or please try again.");

@@ -18,8 +18,6 @@ const CreateConfig = () => {
   const [isEditMode, setIsEditMode] = useState(false);
 
   useEffect(() => {
-    resetConfig();
-    
     if (configId) {
       setIsEditMode(true);
       loadExistingConfig(configId);
@@ -134,7 +132,10 @@ const CreateConfig = () => {
         .is('config_id', null);
   
       if (error) throw error;
-  
+
+      setIsEditMode(false);
+      resetConfig();
+      await fetchConfigSettings();
       console.log("Successfully updated config_settings");
     } catch (error) {
       console.error("Error updating config_settings:", error);
@@ -183,11 +184,11 @@ const CreateConfig = () => {
           await updateConfigSettings(savedConfigId);
         }
         
-        // Reset the form data after successful save
         resetConfig();
+        setIsEditMode(false);
         await fetchConfigSettings();
         
-        router.push('/choose-config');
+        router.replace('/choose-config');
       } catch (error) {
         console.error('Error saving configuration:', error);
         Alert.alert('Error', 'Failed to save configuration');
@@ -204,12 +205,12 @@ const CreateConfig = () => {
   const handleAddRangePress = () => {
     if (isFormValid) {
       if (isEditMode) {
-        router.push({
+        router.replace({
           pathname: "/(sub-pages)/create-config-details",
           params: { configId } 
         });
       } else {
-        router.push('/(sub-pages)/create-config-details');
+        router.replace('/(sub-pages)/create-config-details');
       }
     } else {
       Alert.alert(
@@ -347,7 +348,7 @@ const CreateConfig = () => {
                     handleDeleteConfig(config.id);
                   }}
                   onPress={() => {
-                    router.push({
+                    router.replace({
                       pathname: "/(sub-pages)/create-config-details",
                       params: { 
                         configId: isEditMode ? configId : null,

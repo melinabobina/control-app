@@ -15,26 +15,34 @@ const ChooseConfig = () => {
   
   const fetchData = async () => {
     try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+  
+      const userId = userData?.user?.id;
+      console.log("Retrieved user ID:", userId);
+      
+      if (!userId) throw new Error("User ID not found");
+  
       const { data, error } = await supabase
         .from('configs')
-        .select('*');
-  
+        .select('*') 
+        .eq('user_id', userId);
+    
       if (error) {
         setFetchError('Could not fetch the data');
-        setData(null);
-        console.log(error);
+        setData([]);
+        console.log("Supabase query error:", error);
         return;
       }
   
-      if (data) {
-        setData(data);
-        setFetchError('');
-      }
+      setData(data || []); 
+      setFetchError('');
     } catch (err) {
       console.error('Error fetching configurations:', err);
       setFetchError('An unexpected error occurred');
     }
   };
+  
 
   const handleDeleteConfig = async (id) => {
     try {      
@@ -85,7 +93,7 @@ const ChooseConfig = () => {
                   onDelete={() => handleDeleteConfig(config.id)}
                   onFavoriteChange={handleFavoriteChange}
                   onPress={() => {
-                    router.push({
+                    router.replace({
                       pathname: "/create-config",
                       params: { configId: config.id }
                     });
