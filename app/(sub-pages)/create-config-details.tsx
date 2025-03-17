@@ -16,6 +16,11 @@ const CreateConfigDetails = () => {
   const settingId = params.settingId;
   const isEditing = !!settingId; 
 
+  const tempName = params.tempName;
+  const tempHeight = params.tempHeight;
+  const tempX = params.tempX;
+  const tempY = params.tempY;
+
   const [selectedSignal, setSelectedSignal] = useState("Alpha (8 - 12 Hz)")
   const [rangeValues, setRangeValues] = useState([8, 12]); // Initial range values
   const screenWidth = Dimensions.get('window').width;
@@ -207,9 +212,9 @@ const CreateConfigDetails = () => {
         Alert.alert(
           "Success", 
           `Configuration ${isEditing ? 'updated' : 'saved'} successfully`,
-          [{ text: "OK", onPress: () => router.replace({
+          [{ text: "OK", onPress: () => router.push({
             pathname: "/create-config",
-            params: configId ? { configId } : {} // Pass configId if it exists
+            params: configId ? { configId } : {} 
           })}]
         );
       } catch (error) {

@@ -89,3 +89,7 @@ const SignIn = () => {
 }
 
 export default SignIn;
+
+function resetConfig() {
+  throw new Error('Function not implemented.')
+}

@@ -1,5 +1,5 @@
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Image, Alert } from 'react-native'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Header from '@/components/Header';
 import { TextInput } from "@/components/TextInput";
 import { router, useLocalSearchParams } from 'expo-router';
@@ -16,16 +16,44 @@ const CreateConfig = () => {
   const [data, setData] = useState(null);
   const [hasPanelLock, setHasPanelLock] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const isInitialMount = useRef(true);
+  const settingsRefreshToken = useRef(0);
 
   useEffect(() => {
-    if (configId) {
-      setIsEditMode(true);
-      loadExistingConfig(configId);
-    }
+    resetConfig();
+    setData(null);
+    setHasPanelLock(false);
+    setIsEditMode(false);
     
-    fetchConfigSettings();
+    isInitialMount.current = false;
+  }, []);
+  
+  // This effect runs when configId changes after initial mount
+  useEffect(() => {
+    if (!isInitialMount.current && configId !== undefined) {
+      console.log("ConfigId changed to:", configId);
+      
+      // Reset when navigating to a different config
+      resetConfig();
+      setData(null);
+      setHasPanelLock(false);
+      
+      if (configId) {
+        setIsEditMode(true);
+        loadExistingConfig(configId);
+      } else {
+        setIsEditMode(false);
+      }
+    }
   }, [configId]);
+  
+  useEffect(() => {
+    if (isEditMode || configId) {
+      fetchConfigSettings();
+    }
+  }, [configId, settingsRefreshToken.current]);
 
+  // Update panel lock based on data
   useEffect(() => {
     if (data && data.length > 0) {
       setHasPanelLock(true);
@@ -36,6 +64,7 @@ const CreateConfig = () => {
 
   const loadExistingConfig = async (id) => {
     try {
+      console.log("Loading existing config:", id);
       const { data, error } = await supabase
         .from('configs')
         .select('*')
@@ -49,6 +78,7 @@ const CreateConfig = () => {
       }
 
       if (data) {
+        console.log("Config data loaded:", data);
         setName(data.config_name || '');
         setHeight(data.starting_height ? data.starting_height.toString() : '');
         setX(data.panels_x ? data.panels_x.toString() : '');
@@ -62,6 +92,7 @@ const CreateConfig = () => {
 
   const fetchConfigSettings = async () => {
     try {
+      console.log("Fetching config settings for configId:", configId);
       let query = supabase
         .from('config_settings')
         .select('*');
@@ -76,13 +107,16 @@ const CreateConfig = () => {
   
       if (error) {
         setFetchError('Could not fetch the data');
-        setData(null);
         console.log(error);
         return;
       }
   
       if (data) {
         setData(data);
+        // Only set panel lock based on data
+        if (data.length > 0) {
+          setHasPanelLock(true);
+        }
         setFetchError('');
       }
     } catch (err) {
@@ -106,7 +140,9 @@ const CreateConfig = () => {
         throw error;
       }
 
-      await fetchConfigSettings();
+      // Just refresh settings without resetting the form
+      settingsRefreshToken.current += 1;
+      fetchConfigSettings();
       Alert.alert("Success", "Configuration setting deleted successfully");
     } catch (error) {
       console.error('Error deleting configuration setting:', error);
@@ -124,6 +160,7 @@ const CreateConfig = () => {
     setIsFormValid(formIsValid);
   }, [name, height, x, y]);
 
+
   const updateConfigSettings = async (configId) => {
     try {
       const { error } = await supabase
@@ -133,9 +170,6 @@ const CreateConfig = () => {
   
       if (error) throw error;
 
-      setIsEditMode(false);
-      resetConfig();
-      await fetchConfigSettings();
       console.log("Successfully updated config_settings");
     } catch (error) {
       console.error("Error updating config_settings:", error);
@@ -171,6 +205,8 @@ const CreateConfig = () => {
           
           if (error) throw error;
           savedConfigId = configId;
+          
+          await updateConfigSettings(savedConfigId);
         } else {
           // Create new config
           const { data, error } = await supabase
@@ -186,9 +222,10 @@ const CreateConfig = () => {
         
         resetConfig();
         setIsEditMode(false);
-        await fetchConfigSettings();
+        setData(null);
+        setHasPanelLock(false);
         
-        router.replace('/choose-config');
+        router.push('/choose-config');
       } catch (error) {
         console.error('Error saving configuration:', error);
         Alert.alert('Error', 'Failed to save configuration');
@@ -205,12 +242,20 @@ const CreateConfig = () => {
   const handleAddRangePress = () => {
     if (isFormValid) {
       if (isEditMode) {
-        router.replace({
+        router.push({
           pathname: "/(sub-pages)/create-config-details",
           params: { configId } 
         });
       } else {
-        router.replace('/(sub-pages)/create-config-details');
+        router.push({
+          pathname: '/(sub-pages)/create-config-details',
+          params: {
+            tempName: name,
+            tempHeight: height,
+            tempX: x,
+            tempY: y
+          }
+        });
       }
     } else {
       Alert.alert(
@@ -348,7 +393,7 @@ const CreateConfig = () => {
                     handleDeleteConfig(config.id);
                   }}
                   onPress={() => {
-                    router.replace({
+                    router.push({
                       pathname: "/(sub-pages)/create-config-details",
                       params: { 
                         configId: isEditMode ? configId : null,

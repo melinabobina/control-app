@@ -1,74 +1,153 @@
-# Welcome to the Neural Kinetic Sculpture app 👋
+# Neural Kinetic Sculpture App 🎨🧠✨
+
+Welcome to the Neural Kinetic Sculpture app 👋
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-## Get started
+A mobile application built in **React Native (Expo)** to control and visualize settings for the **Neural Kinetic Sculpture**—an interactive LED installation enhanced by EEG brainwave signals. This app allows users to map EEG-derived data (like alpha wave amplitudes) to dynamic behaviors of the sculpture such as LED brightness, movement speed, and sound. It also provides real-time-like playback of pre-recorded EEG signals and communicates with the sculpture via Bluetooth.
 
-1. Install dependencies
+---
+
+## 📱 Features
+
+- **User Authentication** (via Supabase)
+- **Configurable Settings**: Map EEG frequency bands (alpha, beta, delta, etc.) to:
+  - LED brightness levels
+  - Panel motion speeds
+  - Sound triggers
+- **Archive of EEG Recordings**:
+  - Store & display EEG waveform CSVs
+  - Playback with timestamp simulation
+- **Bluetooth Communication**: Send configuration data wirelessly to the sculpture's microcontroller.
+- **Clean UI** using **Tailwind (NativeWind)** for styling.
+
+---
+
+## 🌟 Tech Stack
+
+| Frontend                  | Backend/Storage        | Communication           |
+|--------------------------|------------------------|-------------------------|
+| React Native (Expo)       | Supabase (Auth & DB)    | WIFI |
+| NativeWind (Tailwind CSS) | Supabase Storage (CSVs) | WIFI to Microcontroller |
+
+---
+
+## 🏗️ Project Structure Overview
+
+```
+/neural-kinetic-sculpture-app
+├── assets/                # App assets (images, icons, etc.)
+├── components/            # Reusable UI components
+├── screens/               # App screens (Home, Config, Recordings, etc.)
+├── services/
+│   └── supabase.js        # Supabase client setup
+├── utils/                 # Helper functions (e.g., CSV parsing, WIFI utils)
+├── App.js                 # Main entry point
+├── tailwind.config.js     # NativeWind/Tailwind config
+├── app.json               # Expo config
+└── README.md              # Project documentation (this file)
+```
+
+---
+
+## ⚙️ Quick Setup Tips
+
+### Get started
+
+1. **Install dependencies**
 
    ```bash
    npm install
    ```
 
-2. Start the app
+2. **Start the app**
 
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+In the output, you'll find options to open the app in:
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- [Development Build](https://docs.expo.dev/develop/development-builds/introduction/)
+- [Android Emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
+- [iOS Simulator](https://docs.expo.dev/workflow/ios-simulator/)
+- [Expo Go](https://expo.dev/go), a sandbox for trying out app development
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Start developing by editing files inside the **app/** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
-## Get a fresh project
+---
 
-When you're ready, run:
+## 🔀 Resetting Project (Optional)
+
+When you're ready to start fresh:
 
 ```bash
 npm run reset-project
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+This moves starter code to the **app-example/** folder and creates a blank **app/** directory for development.
 
-## Learn more
+---
 
-To learn more about developing your project with Expo, look at the following resources:
+## 🛠️ Necessary Installations
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+| Feature/Component                     | Installation Command                                                                                                                                              |
+|--------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **React Native Vector Icons**        | [Installation guide](https://github.com/oblador/react-native-vector-icons?tab=readme-ov-file#installation)                                                        |
+| **Text Input Elements (RNE)**        | `npx elements-cli@latest add text-input`                                                                                                                           |
+| **Range Slider Input**               | `npm install --save @ptomasroos/react-native-multi-slider`                                                                                                         |
+| **Supabase & Async Storage**         | `npx expo install @supabase/supabase-js @react-native-async-storage/async-storage @rneui/themed react-native-url-polyfill`                                         |
+| **Environment Variables (.env)**     | `npm install react-native-config`                                                                                                                                  |
+| **Color Picker**                     | `npm install reanimated-color-picker` ([Color Picker Package](https://www.npmjs.com/package/reanimated-color-picker))                                              |
+| **State Management (Zustand)**       | `npm install zustand`                                                                                                                                              |
+| **Modal Support**                    | `npm i react-native-modal`                                                                                                                                         |
 
-## Installations
-react-native icons:
-https://github.com/oblador/react-native-vector-icons?tab=readme-ov-file#installation
+---
 
-text input:
-npx elements-cli@latest add text-input
+## 📂 Supabase Database Schema Overview
 
-range slider input:
-npm install --save @ptomasroos/react-native-multi-slider
+1. **users**
+2. **configs**
+3. **config-settings**
+4. **recordings**
 
-Supabase:
-npx expo install @supabase/supabase-js @react-native-async-storage/async-storage @rneui/themed react-native-url-polyfill
+Refer to Supabase schema setup for further detail.
 
-.env file
-npm install react-native-config
+---
 
-color picker:
-https://www.npmjs.com/package/reanimated-color-picker
+## 🛡️ WIFI Communication Overview
 
-zustand:
-npm install zustand
+- Communicates via WIFI.
+- Sends config parameters (LED brightness, motion speed, sound triggers) to the microcontroller.
 
-modal:
-npm i react-native-modal
+---
 
+## 💡 Inspiration
 
-## Attribution
- include the attribution line on the credits section and/or in the description on the app store or website where your app or game is available.
- 
- www.freepik.com (for the brain image)
+This app is part of a larger **Senior Design Project** blending **art, technology, and neuroscience**—aiming to create an engaging, interactive experience where brainwaves control kinetic LED sculptures, enhancing performances and audience connection.
+
+---
+
+## 👤 Creator & Contact
+
+Created & developed by **Katrina Viray**  
+📧 Email: katvir3@gmail.com  
+👥 LinkedIn: [linkedin.com/in/katrina-viray](https://linkedin.com/in/katrina-viray)  
+
+Feel free to reach out for questions, feedback, or collaboration opportunities!
+
+---
+
+## 📄 Attribution and Credits
+
+- Brain image provided by **www.freepik.com**  
+
+---
+
+## 👌 Acknowledgments
+
+- [Supabase](https://supabase.io/)
+- [Expo](https://expo.dev/)
+- [NativeWind](https://www.nativewind.dev/)
+- University of Houston Brain Center for EEG collaboration.
+

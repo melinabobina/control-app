@@ -3,24 +3,25 @@ import React, { useEffect, useState } from 'react'
 import Header from '@/components/Header';
 import Config from '@/components/Config';
 import { supabase } from '@/lib/supabase';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 
 const ChooseConfig = () => {
   const [fetchError, setFetchError] = useState('');
   const [data, setData] = useState(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [])
+  );
   
   const fetchData = async () => {
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
   
-      const userId = userData?.user?.id;
-      console.log("Retrieved user ID:", userId);
-      
+      const userId = userData?.user?.id;      
       if (!userId) throw new Error("User ID not found");
   
       const { data, error } = await supabase
@@ -93,8 +94,8 @@ const ChooseConfig = () => {
                   onDelete={() => handleDeleteConfig(config.id)}
                   onFavoriteChange={handleFavoriteChange}
                   onPress={() => {
-                    router.replace({
-                      pathname: "/create-config",
+                    router.push({
+                      pathname: "/(sub-pages)/choose-config-or-edit",
                       params: { configId: config.id }
                     });
                   }}
