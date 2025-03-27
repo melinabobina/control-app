@@ -8,7 +8,7 @@ import { useCallback } from 'react';
 
 const ChooseConfig = () => {
   const [fetchError, setFetchError] = useState('');
-  const [data, setData] = useState(null);
+  const [data, setData] = useState<{ id: string; config_name: string; created_at: string; favorite: boolean }[]>([]);
 
   useFocusEffect(
     useCallback(() => {

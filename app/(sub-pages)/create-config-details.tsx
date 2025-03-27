@@ -214,7 +214,9 @@ const CreateConfigDetails = () => {
           `Configuration ${isEditing ? 'updated' : 'saved'} successfully`,
           [{ text: "OK", onPress: () => router.push({
             pathname: "/create-config",
-            params: configId ? { configId } : {} 
+            params: configId ? 
+              { configId, returnFromDetails: true } : 
+              { tempName, tempHeight, tempX, tempY, returnFromDetails: true } 
           })}]
         );
       } catch (error) {

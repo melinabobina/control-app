@@ -4,7 +4,7 @@ Welcome to the Neural Kinetic Sculpture app 👋
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-A mobile application built in **React Native (Expo)** to control and visualize settings for the **Neural Kinetic Sculpture**—an interactive LED installation enhanced by EEG brainwave signals. This app allows users to map EEG-derived data (like alpha wave amplitudes) to dynamic behaviors of the sculpture such as LED brightness, movement speed, and sound. It also provides real-time-like playback of pre-recorded EEG signals and communicates with the sculpture via Bluetooth.
+A mobile application built in **React Native (Expo)** to control and visualize settings for the **Neural Kinetic Sculpture**—an interactive LED installation enhanced by EEG brainwave signals. This app allows users to map EEG-derived data (like alpha wave amplitudes) to dynamic behaviors of the sculpture such as LED brightness and movement speed. It also provides real-time-like playback of pre-recorded EEG signals and communicates with the sculpture via WIFI.
 
 ---
 

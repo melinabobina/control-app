@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 const CreateConfig = () => {
   const { configId } = useLocalSearchParams();
   const { x, y, name, height, setX, setY, setName, setHeight, resetConfig } = useConfigStore();
+  const params = useLocalSearchParams();
   const [isFormValid, setIsFormValid] = useState(false);
   const [fetchError, setFetchError] = useState('');
   const [data, setData] = useState(null);
@@ -20,10 +21,13 @@ const CreateConfig = () => {
   const settingsRefreshToken = useRef(0);
 
   useEffect(() => {
-    resetConfig();
-    setData(null);
-    setHasPanelLock(false);
-    setIsEditMode(false);
+    // Only reset on first mount if no configId is provided
+    if (!configId) {
+      resetConfig();
+      setData(null);
+      setHasPanelLock(false);
+    }
+    setIsEditMode(!!configId);
     
     isInitialMount.current = false;
   }, []);
@@ -239,12 +243,26 @@ const CreateConfig = () => {
     }
   };
   
+  useEffect(() => {
+    // Check if returning from details page
+    if (params?.returnFromDetails) {
+      // Restore temp values if not in edit mode
+      if (!configId && params.tempName) {
+        setName(params.tempName);
+        setHeight(params.tempHeight);
+        setX(params.tempX);
+        setY(params.tempY);
+      }
+      fetchConfigSettings();
+    }
+  }, [params?.returnFromDetails]);
+
   const handleAddRangePress = () => {
     if (isFormValid) {
       if (isEditMode) {
         router.push({
           pathname: "/(sub-pages)/create-config-details",
-          params: { configId } 
+          params: { configId, isCreatingConfig: true } 
         });
       } else {
         router.push({
@@ -253,7 +271,8 @@ const CreateConfig = () => {
             tempName: name,
             tempHeight: height,
             tempX: x,
-            tempY: y
+            tempY: y,
+            isCreatingConfig: true
           }
         });
       }
