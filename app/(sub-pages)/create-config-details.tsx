@@ -23,6 +23,7 @@ const CreateConfigDetails = () => {
 
   const [selectedSignal, setSelectedSignal] = useState("Alpha (8 - 12 Hz)")
   const [rangeValues, setRangeValues] = useState([8, 12]); // Initial range values
+  const [PSDValues, setPSDValues] = useState([0, 100]);
   const screenWidth = Dimensions.get('window').width;
   const { x, y } = useConfigStore();
   const [selectedPanels, setSelectedPanels] = useState(new Set());
@@ -190,6 +191,8 @@ const CreateConfigDetails = () => {
           speed: parseFloat(speed),
           direction: direction.toLowerCase(),
           color: selectedColor,
+          lower_PSD: PSDValues[0],
+          upper_PSD: PSDValues[1],
           config_id: configId || null // Make sure to pass the configId
         };
         
@@ -323,6 +326,50 @@ const CreateConfigDetails = () => {
                   </Text>
                   <Text className="text-darkPurple pb-2 text-center font-normal mt-4">
                     {rangeValues[0]} [Hz] to {rangeValues[1]} [Hz]
+                  </Text>
+                </View>
+              </View>
+
+              <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">
+                Specify a power spectral density range:
+              </Text>
+              <View className="mt-4 bg-medYellow w-11/12 py-3 rounded-3xl items-center">
+                <MultiSlider
+                    values={PSDValues}
+                    onValuesChange={(values) => setPSDValues(values)}
+                    min={0}
+                    max={100}
+                    step={1}
+                    allowOverlap={false}
+                    snapped
+                    containerStyle={{
+                      height: 40,
+                      marginTop: 10
+                    }}
+                    selectedStyle={{
+                      backgroundColor: '#47313E'
+                    }}
+                    unselectedStyle={{
+                      backgroundColor: '#E5E7EB' // light gray
+                    }}
+                    sliderLength={screenWidth * 0.75} // 75% of screen width
+                    markerStyle={{
+                      backgroundColor: '#47313E',
+                      height: 20,
+                      width: 20,
+                    }}
+                    trackStyle={{
+                      height: 6,
+                      borderRadius: 3,
+                    }}
+                  />
+
+                <View className="flex-row">
+                  <Text className="text-darkPurple px-2 pb-2 text-center font-normal mt-4">
+                    Selected range: 
+                  </Text>
+                  <Text className="text-darkPurple pb-2 text-center font-normal mt-4">
+                    {PSDValues[0]} [dBm/Hz] to {PSDValues[1]} [dBm/Hz]
                   </Text>
                 </View>
               </View>

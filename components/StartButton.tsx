@@ -37,7 +37,7 @@ const StartButton = () => {
             });
 
             socket.on('connect_error', (error) => {
-                console.error('⚠️ Connection error:', error);
+                console.error('onnection error:', error);
                 setConnectionStatus('Error');
             });
 
@@ -47,19 +47,28 @@ const StartButton = () => {
             });
 
             socket.on('eeg_data', (data) => {
-                console.log("Raw EEG data received:", data, typeof data);
-                if (data) {
+                console.log("Raw EEG data received:", data);
+                try {
                     const parsed = typeof data === 'string' ? JSON.parse(data) : data;
-                    const logMessage = `Alpha: ${parsed.frequency?.toFixed(2)}Hz, Amp: ${parsed.amplitude?.toFixed(2)}, PSD: ${parsed.psd?.toFixed(2)}`;
-                    console.log(logMessage);
-                } else {
-                    console.log("Data received was null");
+
+                    const { wave_type, dominant_freq, psd, confidence, timestamp } = parsed;
+
+                    if (wave_type === "alpha") {
+                        console.log(
+                            `🧠 Alpha Wave | Freq: ${dominant_freq.toFixed(2)} Hz | ` +
+                            `PSD: ${psd.toFixed(2)} | Conf: ${confidence} | Time: ${timestamp}`
+                        );
+                    } else {
+                        console.log("Received non-alpha wave:", wave_type);
+                    }
+                } catch (err) {
+                    console.error("Error parsing EEG data:", err);
                 }
             });
 
             return () => {
                 socket.disconnect();
-                console.log("Disconnected from WebSocket server");
+                console.log("🔌Disconnected from WebSocket server");
                 setConnectionStatus('Disconnected');
             };
         } else {
