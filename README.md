@@ -151,3 +151,6 @@ Feel free to reach out for questions, feedback, or collaboration opportunities!
 - [NativeWind](https://www.nativewind.dev/)
 - University of Houston Brain Center for EEG collaboration.
 
+npm install socket.io-client@4.5.1
+npm install react-native-chart-kit
+

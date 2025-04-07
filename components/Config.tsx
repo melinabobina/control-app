@@ -44,7 +44,6 @@ const Config = ({id, name, date, favorite, onDelete, onFavoriteChange, onPress})
                 setIsFavorite(isFavorite);
                 Alert.alert("Error", "Failed to update favorite status");
             } else {
-                console.log('Favorite status updated successfully');
                 if (onFavoriteChange) {
                     onFavoriteChange(id, newFavoriteStatus);
                 }

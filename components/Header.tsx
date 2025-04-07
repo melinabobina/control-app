@@ -53,7 +53,7 @@ const Header = ({ title, header }) => {
       <View className="flex-row justify-between w-full px-5">
         <TouchableOpacity onPress={toggleModal2}>
           <Image
-            source={icons.tabMenu}
+            source={icons.menu}
             resizeMode="contain"
             className="w-8 h-8"
           />

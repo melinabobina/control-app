@@ -12,11 +12,9 @@ import eyeHide from "../assets/icons/eye-hide.png";
 import eye from "../assets/icons/eye.png";
 import play from "../assets/icons/play.png";
 import config from "../assets/icons/config.png";
-import tabMenu from "../assets/icons/tabMenu.png";
 import trash from "../assets/icons/trash.png";
 import filledStar from "../assets/icons/filled-star.png";
 import emptyStar from "../assets/icons/empty-star.png";
-
 
 export default {
   play,
@@ -33,8 +31,7 @@ export default {
   eyeHide,
   eye,
   config,
-  tabMenu,
   trash,
-  emptyStar,
   filledStar,
+  emptyStar,
 };

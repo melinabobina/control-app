@@ -1,19 +1,18 @@
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Image, Dimensions, Alert } from 'react-native'
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import Header from '@/components/Header';
 import { icons } from '@/constants';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import ConfigPlay from '@/components/ConfigPlay';
 import ConfigDetails from '@/components/ConfigDetails';
+import StartButton from '@/components/StartButton';
 
 const PlayConfig = () => {
     const { configId } = useLocalSearchParams();
     const [fetchError, setFetchError] = useState('');
     const [data, setData] = useState(null);
     const [configData, setConfigData] = useState(null);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const screenWidth = Dimensions.get('window').width;
 
     useFocusEffect(
         useCallback(() => {
@@ -67,21 +66,6 @@ const PlayConfig = () => {
         router.back();
     };
 
-    const handlePress = () => {
-        if (isPlaying) {
-            Alert.alert(
-                "Stop Playing?",
-                "Are you sure you want to stop playing the configuration?",
-                [
-                    { text: "No", style: "cancel" },
-                    { text: "Yes", onPress: () => setIsPlaying(false) }
-                ]
-            );
-        } else {
-            setIsPlaying(true);
-        }
-    };
-
     return (
         <SafeAreaView className="bg-white h-full">  
             <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}>
@@ -105,14 +89,7 @@ const PlayConfig = () => {
                         header={"Enjoy the performance!"}
                     />        
 
-                    <View className="pt-5 pb-5">
-                        <TouchableOpacity 
-                            className={`rounded-2xl py-4 px-36 ${isPlaying ? 'bg-darkPurple' : 'bg-lightPurple'}`}
-                            onPress={handlePress}
-                        >
-                            <Text className="text-white font-bold">{isPlaying ? 'Playing...' : 'Press to begin'}</Text>
-                        </TouchableOpacity>
-                    </View>
+                    <StartButton/>
 
                     {fetchError && (<Text className="text-red-500 mt-2">{fetchError}</Text>)}
                     {data && data.length > 0 ? (
@@ -124,7 +101,7 @@ const PlayConfig = () => {
                                 >
                                     <ConfigPlay
                                         name={config.setting_name}
-                                        color="slate-300"
+                                        color="slate-500"
                                     />
                                 </View>
                             ))}
