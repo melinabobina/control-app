@@ -1,8 +1,10 @@
+import { useConfigStore } from '../store';
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Alert, TouchableOpacity } from 'react-native';
 import io from 'socket.io-client';
 
 const StartButton = () => {
+    const setEegData = useConfigStore((state) => state.setEegData);
     const [isPlaying, setIsPlaying] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState('Disconnected');
     const socketRef = useRef(null);
@@ -24,7 +26,7 @@ const StartButton = () => {
 
     useEffect(() => {
         if (isPlaying) {
-            const socket = io('http://192.168.1.224:5001', {
+            const socket = io('https://signal-filter.onrender.com', {
                 reconnection: true,
                 reconnectionAttempts: 5
             });
@@ -47,20 +49,17 @@ const StartButton = () => {
             });
 
             socket.on('eeg_data', (data) => {
-                console.log("Raw EEG data received:", data);
                 try {
                     const parsed = typeof data === 'string' ? JSON.parse(data) : data;
 
                     const { wave_type, dominant_freq, psd, confidence, timestamp } = parsed;
 
-                    if (wave_type === "alpha") {
-                        console.log(
-                            `🧠 Alpha Wave | Freq: ${dominant_freq.toFixed(2)} Hz | ` +
-                            `PSD: ${psd.toFixed(2)} | Conf: ${confidence} | Time: ${timestamp}`
-                        );
-                    } else {
-                        console.log("Received non-alpha wave:", wave_type);
-                    }
+                    setEegData(parsed);
+                    console.log(
+                        `Wave: ${wave_type} | Freq: ${dominant_freq.toFixed(2)} Hz | ` +
+                        `PSD: ${psd.toFixed(2)} | Conf: ${confidence} | Time: ${timestamp}`
+                    );
+
                 } catch (err) {
                     console.error("Error parsing EEG data:", err);
                 }
