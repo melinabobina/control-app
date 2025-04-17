@@ -284,6 +284,33 @@ const CreateConfig = () => {
       );
     }
   };
+    const handleAudioPress = () => {
+      if (isFormValid) {
+        if (isEditMode) {
+          router.push({
+            pathname: "/(sub-pages)/create-audio-details",
+            params: { configId, isCreatingConfig: true }
+          });
+        } else {
+          router.push({
+            pathname: '/(sub-pages)/create-audio-details',
+            params: {
+              tempName: name,
+              tempHeight: height,
+              tempX: x,
+              tempY: y,
+              isCreatingConfig: true
+            }
+          });
+        }
+      } else {
+        Alert.alert(
+          "Missing Information",
+          "Please fill out all required fields before adding audio.",
+          [{ text: "OK" }]
+        );
+      }
+    };
 
   const showPanelLockMessage = () => {
     if (hasPanelLock) {
@@ -394,6 +421,26 @@ const CreateConfig = () => {
               />
             </View>
           </TouchableOpacity>
+
+          <TouchableOpacity  // AUDIO SECTION
+                      activeOpacity={isFormValid ? 0.7 : 1}
+                      className={`${isFormValid ? 'bg-lightPurple' : 'bg-gray-400'} w-96 items-center justify-center h-12 rounded-2xl mt-4`}
+                      onPress={handleAudioPress}
+                    >
+                      <View className="flex-row items-center justify-between w-full px-5">
+                        <View className="flex-1 items-center">
+                          <Text className="text-white font-medium">
+                            Choose Audio
+                          </Text>
+                        </View>
+                        <Image
+                          source={icons.plus}
+                          resizeMode="contain"
+                          tintColor="white"
+                          className="w-6 h-6"
+                        />
+                      </View>
+                    </TouchableOpacity>
 
           <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">Current ranges:</Text>
         
