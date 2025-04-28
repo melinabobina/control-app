@@ -39,7 +39,7 @@ const StartButton = () => {
             });
 
             socket.on('connect_error', (error) => {
-                console.error('onnection error:', error);
+                console.error('Connection error:', error);
                 setConnectionStatus('Error');
             });
 
@@ -48,18 +48,20 @@ const StartButton = () => {
                 setConnectionStatus('Error');
             });
 
+         socket.emit("control_command", "1 2 20 2");
+
             socket.on('eeg_data', (data) => {
                 try {
                     const parsed = typeof data === 'string' ? JSON.parse(data) : data;
 
-                    const { wave_type, dominant_freq, psd, confidence, timestamp } = parsed;
-
-                    setEegData(parsed);
+                    const { alpha_band, beta_band, theta_band, delta_band, gamma_band, dominant_band, alpha_beta_ratio, alpha_delta_ratio, peak_alpha_freq, timestamp } = parsed;
                     console.log(
-                        `Wave: ${wave_type} | Freq: ${dominant_freq.toFixed(2)} Hz | ` +
-                        `PSD: ${psd.toFixed(2)} | Conf: ${confidence} | Time: ${timestamp}`
+                        `Alpha: ${alpha_band.toFixed(2)} | Beta: ${beta_band.toFixed(2)} | Theta: ${theta_band.toFixed(2)}\n` +
+                        `Delta: ${delta_band.toFixed(2)} | Gamma: ${gamma_band.toFixed(2)} | Dominant: ${dominant_band}\n` +
+                        `Alpha/Beta Ratio: ${alpha_beta_ratio.toFixed(2)} | Alpha/Delta Ratio: ${alpha_delta_ratio.toFixed(2)}\n` +
+                        `Peak Alpha Freq: ${peak_alpha_freq.toFixed(2)} Hz | Time: ${timestamp}`
                     );
-
+                    setEegData(parsed);
                 } catch (err) {
                     console.error("Error parsing EEG data:", err);
                 }
