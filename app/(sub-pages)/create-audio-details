@@ -5,29 +5,22 @@ import Header from '@/components/Header';
 import { icons } from '@/constants';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { useConfigStore } from '@/store';
+import { useConfigStore, AudioItem } from '@/store';
 import AudioSelector from '@/components/audio/AudioSelector';
 import { Dimensions } from 'react-native';
 
-// Define interface for audio items
-interface AudioItem {
-  id: string;
-  name: string;
-  uri?: string;
-  path?: any;
-  pitch?: number;
-  isPreset: boolean;
-}
-
 const CreateAudioDetails = () => {
   const params = useLocalSearchParams();
-  const configId = params.configId as string;
-  const tempName = params.tempName as string;
+
+  // Get configId from global store instead of params
+  const configId = useConfigStore(state => state.configId);
+  const name = useConfigStore(state => state.name);
+  const setHasAudio = useConfigStore(state => state.setHasAudio);
+  const setAudioItems = useConfigStore(state => state.setAudioItems);
 
   const [selectedAudio, setSelectedAudio] = useState<AudioItem[]>([]);
   const [usePresetAudio, setUsePresetAudio] = useState(true);
   const [isLoading, setIsLoading] = useState(configId ? true : false);
-  const screenWidth = Dimensions.get('window').width;
 
   // Initialize audio module
   useEffect(() => {
@@ -52,26 +45,11 @@ const CreateAudioDetails = () => {
   // Fetch config settings if editing
   useEffect(() => {
     if (configId) {
-      fetchConfigSettings();
       fetchAudioSettings();
     } else {
       setIsLoading(false);
     }
   }, [configId]);
-
-  const fetchConfigSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('config_settings')
-        .select('lower_PSD, upper_PSD')
-        .eq('config_id', configId)
-        .limit(1);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error fetching config settings:', error);
-    }
-  };
 
   const fetchAudioSettings = async () => {
     try {
@@ -123,66 +101,6 @@ const CreateAudioDetails = () => {
     });
   };
 
-  // Check if other configuration details are set
-  const checkConfigurationDetails = async () => {
-    try {
-      // If we're editing an existing config
-      if (configId) {
-        const { data, error } = await supabase
-          .from('config_settings')
-          .select('*')
-          .eq('config_id', configId);
-
-        if (error) throw error;
-
-        // Check if there are any config settings
-        if (!data || data.length === 0) {
-          return false;
-        }
-
-        // Check if any of the configs has the required fields
-        const hasValidConfig = data.some(config =>
-          config.brightness !== null &&
-          config.brightness !== undefined &&
-          config.speed !== null &&
-          config.speed !== undefined &&
-          config.direction !== null &&
-          config.direction !== undefined
-        );
-
-        return hasValidConfig;
-      } else {
-        // For new configs, check if there are unsaved config settings
-        const { data, error } = await supabase
-          .from('config_settings')
-          .select('*')
-          .is('config_id', null);
-
-        if (error) throw error;
-
-        // Check if there are any unsaved config settings
-        if (!data || data.length === 0) {
-          return false;
-        }
-
-        // Check if any of the unsaved configs has the required fields
-        const hasValidConfig = data.some(config =>
-          config.brightness !== null &&
-          config.brightness !== undefined &&
-          config.speed !== null &&
-          config.speed !== undefined &&
-          config.direction !== null &&
-          config.direction !== undefined
-        );
-
-        return hasValidConfig;
-      }
-    } catch (error) {
-      console.error('Error checking configuration details:', error);
-      return false;
-    }
-  };
-
   const saveAudioConfiguration = async () => {
     try {
       if (selectedAudio.length < 3) {
@@ -190,24 +108,14 @@ const CreateAudioDetails = () => {
         return;
       }
 
-      // Check if the other configuration details are set
-      const hasConfigDetails = await checkConfigurationDetails();
-
-      if (!hasConfigDetails) {
-        Alert.alert(
-          "Missing Configuration Details",
-          "Please go back and fill out the configuration details (brightness, speed, direction) before saving audio settings.",
-          [
-            { text: "OK", onPress: () => router.back() }
-          ]
-        );
-        return;
-      }
-
       // Sort audio by pitch (or our placeholder implementation)
       const sortedAudio = analyzeAndSortAudio();
 
-      // Prepare data for saving
+      // Update global state
+      setAudioItems(sortedAudio);
+      setHasAudio(true);
+
+      // Prepare data for saving to DB later when the config is saved
       const audioSettings = {
         config_id: configId || null,
         use_preset: usePresetAudio,
@@ -215,9 +123,9 @@ const CreateAudioDetails = () => {
         created_at: new Date().toISOString()
       };
 
-      // Check if we're editing an existing config
+      // Only save to database if we have a configId (editing an existing config)
       if (configId) {
-        // First check if audio settings already exist
+        // First check if audio settings already exist for this config_id
         const { data: existingData, error: checkError } = await supabase
           .from('audio_settings')
           .select('id')
@@ -241,30 +149,14 @@ const CreateAudioDetails = () => {
 
           if (error) throw error;
         }
-
-        Alert.alert(
-          "Success",
-          "Audio configuration updated successfully",
-          [{ text: "OK", onPress: () => router.push({
-            pathname: "/create-config",
-            params: { configId, returnFromDetails: true }
-          })}]
-        );
-      } else {
-        // We're creating a new config, so store the audio settings without config_id
-        // They will be linked when the config is created
-        const { error } = await supabase
-          .from('audio_settings')
-          .insert([audioSettings]);
-
-        if (error) throw error;
-
-        Alert.alert(
-          "Success",
-          "Audio configuration saved successfully",
-          [{ text: "OK", onPress: () => router.back() }]  // Go back to config details
-        );
       }
+
+      // Success message
+      Alert.alert(
+        "Success",
+        "Audio configuration saved to configuration",
+        [{ text: "OK", onPress: () => router.back() }]
+      );
     } catch (error) {
       console.error('Error saving audio configuration:', error);
       Alert.alert('Error', 'Failed to save audio configuration');
@@ -274,7 +166,6 @@ const CreateAudioDetails = () => {
   const handleBack = () => {
     router.back();
   };
-
 
   if (isLoading) {
     return (
@@ -307,7 +198,7 @@ const CreateAudioDetails = () => {
 
           <Header
             title="Audio Configuration"
-            header="Choose sounds for your sculpture"
+            header={`Choose sounds for "${name || 'your sculpture'}"`}
           />
 
           <View className="w-11/12 px-4">
@@ -317,7 +208,6 @@ const CreateAudioDetails = () => {
               maxItems={10}
               preset={usePresetAudio}
             />
-
 
             {/* Save Button */}
             <TouchableOpacity
@@ -340,11 +230,9 @@ const CreateAudioDetails = () => {
               </View>
             </TouchableOpacity>
 
-            {/* Instruction Note */}
             <View className="mt-4 bg-blue-50 p-3 rounded-lg">
               <Text className="text-darkPurple italic text-center">
-                Note: Make sure you've configured the other settings (brightness, speed, direction)
-                in the configuration details page before saving audio settings.
+                Audio will be saved to your configuration. You'll still need to save the full configuration on the configuration page.
               </Text>
             </View>
           </View>
