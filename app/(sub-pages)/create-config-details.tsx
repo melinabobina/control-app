@@ -1,3 +1,4 @@
+
 import { View, Text, Image, SafeAreaView, ScrollView, Dimensions, Modal, TouchableOpacity, Alert } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import Header from '@/components/Header';
@@ -97,30 +98,6 @@ const CreateConfigDetails = () => {
     }
   }, [settingId, isEditing]);
 
-useEffect(() => { // AUDIO AUDIO AUDIO AUDIO AUDIO
-    const checkAudioSettings = async () => {
-      if (!configId) return;
-
-      try {
-        const { data: audioData, error } = await supabase
-          .from('audio_settings')
-          .select('*')
-          .eq('config_id', configId)
-          .single();
-
-        if (audioData && !error) {
-          setHasAudio(true);
-        } else {
-          setHasAudio(false);
-        }
-      } catch (error) {
-        console.log('No audio settings found for this configuration');
-        setHasAudio(false);
-      }
-    };
-
-    checkAudioSettings();
-  }, [configId]);
 
   const onSelectColor = ({ hex }) => {
     setSelectedColor(hex) 
@@ -259,33 +236,6 @@ useEffect(() => { // AUDIO AUDIO AUDIO AUDIO AUDIO
     }
   };
 
-    const handleAudioPress = () => {
-      if (isFormValid) {
-        if (isEditing && configId) {
-          router.push({
-            pathname: "/(sub-pages)/create-audio-details",
-            params: { configId, isCreatingConfig: true }
-          });
-        } else {
-          router.push({
-            pathname: '/(sub-pages)/create-audio-details',
-            params: {
-              tempName: tempName,
-              tempHeight: tempHeight,
-              tempX: tempX,
-              tempY: tempY,
-              isCreatingConfig: true
-            }
-          });
-        }
-      } else {
-        Alert.alert(
-          "Missing Information",
-          "Please fill out all required fields before adding audio.",
-          [{ text: "OK" }]
-        );
-      }
-    };
 
   const handleBack = () => {
     router.back();
@@ -503,24 +453,6 @@ useEffect(() => { // AUDIO AUDIO AUDIO AUDIO AUDIO
                   <Text style={{ backgroundColor: selectedColor }} className="text-darkPurple font-medium py-2 rounded-md text-center w-full"></Text>
                 </View>
               </View>
-
-                <TouchableOpacity  // AUDIO AUDIO AUDIO AUDIO AUDIO AUDIO AUDIO AUDIO AUDIO
-                    activeOpacity={isFormValid ? 0.7 : 1}
-                    className={`${isFormValid ? 'bg-lightPurple' : 'bg-gray-400'} w-96 items-center justify-center h-12 rounded-2xl mt-4`}
-                    onPress={handleAudioPress}
-                >
-                  <View className="flex-row items-center justify-between w-full px-5">
-                    <View className="flex-1 items-center">
-                      <Text className="text-white font-medium">{hasAudio ? "Edit Audio (Optional)" : "Add Audio (Optional)"}</Text>
-                    </View>
-                    <Image
-                      source={hasAudio ? icons.edit : icons.plus}  // Change the icon based on audio status
-                      resizeMode="contain"
-                      tintColor="white"
-                      className="w-6 h-6"
-                    />
-                  </View>
-                </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={handlePress}
