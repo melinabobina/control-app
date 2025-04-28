@@ -28,20 +28,20 @@ const CreateConfig = () => {
       setHasPanelLock(false);
     }
     setIsEditMode(!!configId);
-    
+
     isInitialMount.current = false;
   }, []);
-  
+
   // This effect runs when configId changes after initial mount
   useEffect(() => {
     if (!isInitialMount.current && configId !== undefined) {
       console.log("ConfigId changed to:", configId);
-      
+
       // Reset when navigating to a different config
       resetConfig();
       setData(null);
       setHasPanelLock(false);
-      
+
       if (configId) {
         setIsEditMode(true);
         loadExistingConfig(configId);
@@ -50,7 +50,7 @@ const CreateConfig = () => {
       }
     }
   }, [configId]);
-  
+
   useEffect(() => {
     if (isEditMode || configId) {
       fetchConfigSettings();
@@ -100,21 +100,21 @@ const CreateConfig = () => {
       let query = supabase
         .from('config_settings')
         .select('*');
-      
+
       if (configId) {
         query = query.eq('config_id', configId);
       } else {
         query = query.is('config_id', null);
       }
-  
+
       const { data, error } = await query;
-  
+
       if (error) {
         setFetchError('Could not fetch the data');
         console.log(error);
         return;
       }
-  
+
       if (data) {
         setData(data);
         // Only set panel lock based on data
@@ -130,16 +130,16 @@ const CreateConfig = () => {
   };
 
   const handleDeleteConfig = async (id) => {
-    try {      
+    try {
       if (!id) {
         throw new Error('No ID provided');
       }
-      
+
       const { error } = await supabase
         .from('config_settings')
         .delete()
         .eq('id', id);
-  
+
       if (error) {
         throw error;
       }
@@ -153,14 +153,14 @@ const CreateConfig = () => {
       Alert.alert("Error", "Failed to delete configuration setting: " + error.message);
     }
   };
-  
+
   useEffect(() => {
-    const formIsValid = 
-      name.trim() !== "" && 
-      height.trim() !== "" && 
-      x.trim() !== "" && 
+    const formIsValid =
+      name.trim() !== "" &&
+      height.trim() !== "" &&
+      x.trim() !== "" &&
       y.trim() !== "";
-    
+
     setIsFormValid(formIsValid);
   }, [name, height, x, y]);
 
@@ -171,7 +171,7 @@ const CreateConfig = () => {
         .from('config_settings')
         .update({ config_id: configId })
         .is('config_id', null);
-  
+
       if (error) throw error;
 
       console.log("Successfully updated config_settings");
@@ -180,40 +180,36 @@ const CreateConfig = () => {
     }
   };
 
-const handleSavePress = async () => {
-  if (isFormValid) {
-    try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
+  const handleSavePress = async () => {
+    if (isFormValid) {
+      try {
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError;
 
-      const userId = userData?.user?.id;
-      console.log('Saving with user ID:', userId); // Add this
+        const userId = userData?.user?.id;
+        if (!userId) throw new Error("User ID not found");
 
-      if (!userId) throw new Error("User ID not found");
+        const configData = {
+          user_id: userId,
+          config_name: name,
+          starting_height: height,
+          panels_x: x,
+          panels_y: y,
+          favorite: isEditMode ? undefined : false,
+        };
 
-      const configData = {
-        user_id: userId,
-        config_name: name,
-        starting_height: height,
-        panels_x: x,
-        panels_y: y,
-        favorite: isEditMode ? undefined : false,
-      };
+        let savedConfigId = null;
 
-      console.log('Config data to save:', configData); // Add this
-
-      let savedConfigId = null;
-
-      if (isEditMode) {
+        if (isEditMode) {
           // Update existing config
           const { error } = await supabase
             .from('configs')
             .update(configData)
             .eq('id', configId);
-          
+
           if (error) throw error;
           savedConfigId = configId;
-          
+
           await updateConfigSettings(savedConfigId);
         } else {
           // Create new config
@@ -222,11 +218,9 @@ const handleSavePress = async () => {
             .insert([configData])
             .select('id')
             .single();
-            console.log('Supabase response:', { data, error }); // DEBUG DEBUG DEBUG DEBUG DEBUG
 
           if (error) throw error;
           savedConfigId = data.id;
-          console.log('Saved config ID:', savedConfigId); // DEBUG DEBUG DEBUG DEBUG DEBUG
           await updateConfigSettings(savedConfigId);
         }
 
@@ -248,7 +242,7 @@ const handleSavePress = async () => {
       );
     }
   };
-  
+
   useEffect(() => {
     // Check if returning from details page
     if (params?.returnFromDetails) {
@@ -268,7 +262,7 @@ const handleSavePress = async () => {
       if (isEditMode) {
         router.push({
           pathname: "/(sub-pages)/create-config-details",
-          params: { configId, isCreatingConfig: true } 
+          params: { configId, isCreatingConfig: true }
         });
       } else {
         router.push({
@@ -290,7 +284,33 @@ const handleSavePress = async () => {
       );
     }
   };
-
+    const handleAudioPress = () => {
+      if (isFormValid) {
+        if (isEditMode) {
+          router.push({
+            pathname: "/(sub-pages)/create-audio-details",
+            params: { configId, isCreatingConfig: true }
+          });
+        } else {
+          router.push({
+            pathname: '/(sub-pages)/create-audio-details',
+            params: {
+              tempName: name,
+              tempHeight: height,
+              tempX: x,
+              tempY: y,
+              isCreatingConfig: true
+            }
+          });
+        }
+      } else {
+        Alert.alert(
+          "Missing Information",
+          "Please fill out all required fields before adding audio.",
+          [{ text: "OK" }]
+        );
+      }
+    };
 
   const showPanelLockMessage = () => {
     if (hasPanelLock) {
@@ -303,10 +323,10 @@ const handleSavePress = async () => {
   };
 
   return (
-    <SafeAreaView className="bg-white h-full">  
+    <SafeAreaView className="bg-white h-full">
       <ScrollView contentContainerStyle={{flexGrow: 1, paddingBottom: 20}}>
         <View className="items-center w-full justify-center">
-          <Header 
+          <Header
             title={isEditMode ? "Edit configuration" : "Create a new configuration"}
             header={isEditMode ? "Edit configuration details below" : "Add and edit new ranges below"}
           />
@@ -333,7 +353,7 @@ const handleSavePress = async () => {
 
           <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">Name your configuration:</Text>
           <View className="mt-4 bg-medYellow w-11/12 h-24 py-3 rounded-3xl justify-center items-center">
-            <TextInput 
+            <TextInput
               value={name}
               onChangeText={setName}
               placeholder="Enter name here"
@@ -345,7 +365,7 @@ const handleSavePress = async () => {
             <Text className="text-darkPurple px-8 pb-2 text-center font-medium">
               Enter, in meters, the distance from the ceiling you would like the sculpture to begin at:
             </Text>
-            <TextInput 
+            <TextInput
               value={height}
               onChangeText={setHeight}
               placeholder="Enter height here"
@@ -364,7 +384,7 @@ const handleSavePress = async () => {
             <Text className="text-darkPurple px-14 pb-2 text-center font-medium">
               Enter the number of panels in the format X by Y, such as a 3x3 array. As of now, we only offer 3x1, 3x2, or 3x3 configurations.
             </Text>
-            <TextInput 
+            <TextInput
               value={x}
               onChangeText={hasPanelLock ? () => showPanelLockMessage() : setX}
               placeholder="Enter x here"
@@ -372,7 +392,7 @@ const handleSavePress = async () => {
               editable={!hasPanelLock}
               style={hasPanelLock ? {color: 'gray'} : {}}
             />
-            <TextInput 
+            <TextInput
               value={y}
               onChangeText={hasPanelLock ? () => showPanelLockMessage() : setY}
               placeholder="Enter y here"
@@ -402,8 +422,28 @@ const handleSavePress = async () => {
             </View>
           </TouchableOpacity>
 
+          <TouchableOpacity  // AUDIO SECTION
+                      activeOpacity={isFormValid ? 0.7 : 1}
+                      className={`${isFormValid ? 'bg-lightPurple' : 'bg-gray-400'} w-96 items-center justify-center h-12 rounded-2xl mt-4`}
+                      onPress={handleAudioPress}
+                    >
+                      <View className="flex-row items-center justify-between w-full px-5">
+                        <View className="flex-1 items-center">
+                          <Text className="text-white font-medium">
+                            Choose Audio
+                          </Text>
+                        </View>
+                        <Image
+                          source={icons.plus}
+                          resizeMode="contain"
+                          tintColor="white"
+                          className="w-6 h-6"
+                        />
+                      </View>
+                    </TouchableOpacity>
+
           <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">Current ranges:</Text>
-        
+
           {fetchError && (<Text className="text-red-500 mt-2">{fetchError}</Text>)}
           {data && data.length > 0 ? (
             <View className="w-full">
@@ -411,7 +451,7 @@ const handleSavePress = async () => {
                 <ConfigRange
                   key={config.id}
                   id={config.id}
-                  signal={config.selectedSignal || config.setting_name} 
+                  signal={config.selectedSignal || config.setting_name}
                   lower_range={config.rangeValues_0 !== undefined ? config.rangeValues_0 : config.lower_range}
                   upper_range={config.rangeValues_1 !== undefined ? config.rangeValues_1 : config.upper_range}
                   color={config.selectedColor || config.color}
@@ -421,9 +461,9 @@ const handleSavePress = async () => {
                   onPress={() => {
                     router.push({
                       pathname: "/(sub-pages)/create-config-details",
-                      params: { 
+                      params: {
                         configId: isEditMode ? configId : null,
-                        settingId: config.id 
+                        settingId: config.id
                       }
                     });
                   }}
