@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
-import { icons } from '@/constants'; // Updated path
+import { icons } from '@/constants';
 
 interface AudioItem {
   id: string;
@@ -39,12 +39,21 @@ const AudioSelector: React.FC<AudioSelectorProps> = ({
   maxItems = 10,
   preset = true
 }) => {
-  // Rest of component implementation...
-  // (Keep the entire implementation from before, just update the imports)
-  const [selectedAudios, setSelectedAudios] = useState<AudioItem[]>(initialAudios);
+  const [selectedAudios, setSelectedAudios] = useState<AudioItem[]>([]);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [currentlyPlayingId, setCurrentlyPlayingId] = useState<string | null>(null);
   const [usePresetAudio, setUsePresetAudio] = useState<boolean>(preset);
+
+  // Store previous value to detect real changes
+  const prevSelectedAudiosRef = useRef<AudioItem[]>([]);
+
+  // Initialize selectedAudios from initialAudios only once
+  useEffect(() => {
+    if (initialAudios.length > 0) {
+      setSelectedAudios(initialAudios);
+      prevSelectedAudiosRef.current = initialAudios;
+    }
+  }, []); // Empty dependency array = only run once on mount
 
   // Clean up sound when component unmounts
   useEffect(() => {
@@ -56,10 +65,24 @@ const AudioSelector: React.FC<AudioSelectorProps> = ({
       : undefined;
   }, [sound]);
 
-  // Update parent component when selected audios change
+  // Only notify parent of changes when necessary
   useEffect(() => {
-    onAudioSelected(selectedAudios);
-  }, [selectedAudios, onAudioSelected]);
+    // Check if there's a real change in the selected audios
+    const prevIds = new Set(prevSelectedAudiosRef.current.map(a => a.id));
+    const currentIds = new Set(selectedAudios.map(a => a.id));
+
+    // If length changed or IDs changed
+    const hasChanged = prevSelectedAudiosRef.current.length !== selectedAudios.length ||
+      selectedAudios.some(audio => !prevIds.has(audio.id)) ||
+      prevSelectedAudiosRef.current.some(audio => !currentIds.has(audio.id));
+
+    if (hasChanged) {
+      // Update ref to current value
+      prevSelectedAudiosRef.current = [...selectedAudios];
+      // Notify parent
+      onAudioSelected(selectedAudios);
+    }
+  }, [selectedAudios]); // Only run when selectedAudios changes
 
   const playSound = async (item: AudioItem) => {
     try {
@@ -208,6 +231,7 @@ const AudioSelector: React.FC<AudioSelectorProps> = ({
     }
   };
 
+  // Rest of the component remains the same...
   return (
     <View className="bg-white rounded-lg w-full">
       <Text className="mt-4 font-bold text-xl text-darkPurple">Choose audio source:</Text>
