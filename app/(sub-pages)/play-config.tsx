@@ -14,34 +14,29 @@ import { Audio } from 'expo-av';
 const PlayConfig = () => {
   const { configId } = useLocalSearchParams();
   const eegData = useConfigStore((state) => state.eegData);
-
-  // EEG data values
-  const dominant_band = eegData?.dominant_band ?? '';
-  const alpha_band = eegData?.alpha_band ?? 0;
-  const beta_band = eegData?.beta_band ?? 0;
-  const theta_band = eegData?.theta_band ?? 0;
-  const delta_band = eegData?.delta_band ?? 0;
-  const gamma_band = eegData?.gamma_band ?? 0;
-  const peak_alpha_freq = eegData?.peak_alpha_freq ?? 0;
+  const isPlaying = useConfigStore((state) => state.isPlaying);
+  const alpha_band = eegData?.alpha_band ?? -1;
+  const beta_band = eegData?.beta_band ?? -1;
+  const theta_band = eegData?.theta_band ?? -1;
+  const delta_band = eegData?.delta_band ?? -1;
+  const gamma_band = eegData?.gamma_band ?? -1;
+  const dominant_band = eegData?.dominant_band ?? -1;
+  const alpha_beta_ratio = eegData?.alpha_beta_ratio ?? -1;
+  const alpha_delta_ratio = eegData?.alpha_delta_ratio ?? -1;
+  const peak_alpha_freq = eegData?.peak_alpha_freq ?? -1;
+  const psd = eegData?.psd ?? -1;
   const timestamp = eegData?.timestamp ?? '';
 
   const [fetchError, setFetchError] = useState('');
   const [data, setData] = useState(null);
   const [configData, setConfigData] = useState(null);
   const [logs, setLogs] = useState([]);
-  const [espComm, setEspComm] = useState<ESPCommunicator | null>(null);
   const [previousActiveConfigs, setPreviousActiveConfigs] = useState([]);
   const [audioSettings, setAudioSettings] = useState(null);
   const [soundObjects, setSoundObjects] = useState<Map<string, Audio.Sound>>(new Map());
   const [playingAudio, setPlayingAudio] = useState<Set<string>>(new Set());
 
-  // Get socket from StartButton's reference
-  useEffect(() => {
-    const socket = typeof window !== 'undefined' && window.currentSocket ? window.currentSocket : null;
-    if (socket) {
-      setEspComm(new ESPCommunicator(socket));
-    }
-  }, []);
+
 
   // Clean up audio on unmount
   useEffect(() => {
@@ -78,13 +73,13 @@ const PlayConfig = () => {
   useEffect(() => {
     if (dominant_band && timestamp) {
       const formattedTime = formatTimestamp(timestamp);
-      const logEntry = `Band: ${dominant_band}, Alpha: ${alpha_band.toFixed(2)}, Beta: ${beta_band.toFixed(2)}, Theta: ${theta_band.toFixed(2)}, Time: ${formattedTime}`;
+      const logEntry = `Dominant band: ${dominant_band}, alpha: ${alpha_band.toFixed(2)}, beta: ${beta_band.toFixed(2)}, theta: ${theta_band.toFixed(2)}, delta: ${delta_band.toFixed(2)}, gamma: ${gamma_band.toFixed(2)}, peak alpha freq: ${peak_alpha_freq.toFixed(2)}, psd: ${psd.toFixed(2)}, Time: ${formattedTime}`;
       setLogs((prevLogs) => {
         const updatedLogs = [logEntry, ...prevLogs];
         return updatedLogs.slice(0, 10);
       });
     }
-  }, [dominant_band, alpha_band, beta_band, theta_band, delta_band, gamma_band, timestamp]);
+  }, [dominant_band, alpha_band, beta_band, theta_band, delta_band, gamma_band, psd, timestamp]);
 
   useFocusEffect(
     useCallback(() => {
@@ -171,38 +166,24 @@ const PlayConfig = () => {
   };
 
   const activeConfigs = useMemo(() => {
-    if (!data || !eegData) return [];
+     if (!data || !isPlaying) return [];
 
-    return data.filter(config => {
-      const bandName = config.setting_name.split(' ')[0].toLowerCase();
-
-      let bandValue = 0;
-      switch (bandName) {
-        case 'alpha':
-          bandValue = alpha_band;
-          break;
-        case 'beta':
-          bandValue = beta_band;
-          break;
-        case 'theta':
-          bandValue = theta_band;
-          break;
-        case 'delta':
-          bandValue = delta_band;
-          break;
-        case 'gamma':
-          bandValue = gamma_band;
-          break;
-        default:
-          return false;
-      }
-
-      const lowerIntensity = config.lower_intensity || 0;
-      const upperIntensity = config.upper_intensity || 1;
-
-      return bandValue >= lowerIntensity && bandValue <= upperIntensity;
-    });
-  }, [data, eegData, alpha_band, beta_band, theta_band, delta_band, gamma_band]);
+         return data.filter(config => {
+           if (config.setting_name.toLowerCase().includes('alpha')) {
+             return alpha_band >= config.lower_range && alpha_band <= config.upper_range;
+           } else if (config.setting_name.toLowerCase().includes('beta')) {
+             return beta_band >= config.lower_range && beta_band <= config.upper_range;
+           } else if (config.setting_name.toLowerCase().includes('theta')) {
+             return theta_band >= config.lower_range && theta_band <= config.upper_range;
+           } else if (config.setting_name.toLowerCase().includes('delta')) {
+             return delta_band >= config.lower_range && delta_band <= config.upper_range;
+           } else if (config.setting_name.toLowerCase().includes('gamma')) {
+             return gamma_band >= config.lower_range && gamma_band <= config.upper_range;
+           } else {
+             return false;
+           }
+         });
+       }, [data, isPlaying, alpha_band, beta_band, theta_band, delta_band, gamma_band]);
 
   // Send updates to ESP and handle audio when active configs change
   useEffect(() => {
@@ -305,7 +286,7 @@ const PlayConfig = () => {
             header={"Enjoy the performance!"}
           />
 
-          <StartButton />
+          <StartButton activeConfigs={activeConfigs} />
 
           {fetchError && (<Text className="text-red-500 mt-2">{fetchError}</Text>)}
 
