@@ -1,26 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { Audio } from 'expo-av';
-import * as DocumentPicker from 'expo-document-picker';
 import Header from '@/components/Header';
 import { icons } from '@/constants';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useConfigStore } from '@/store';
+import AudioSelector from '@/components/audio/AudioSelector';
+import { Dimensions } from 'react-native';
 
-// Define preset audio options
-const PRESET_AUDIO = [
-  { id: 1, name: 'Bright Star', path: require('@/assets/sounds/synth-bright-star.wav') },
-  { id: 2, name: 'Cream', path: require('@/assets/sounds/synth-cream.wav') },
-  { id: 3, name: 'Tah-Dah', path: require('@/assets/sounds/synth-cut-tahdah.wav') },
-  { id: 4, name: 'Electroids', path: require('@/assets/sounds/synth-electroids.wav') },
-  { id: 5, name: 'Foggy', path: require('@/assets/sounds/synth-foggy.wav') },
-  { id: 6, name: 'Gentle', path: require('@/assets/sounds/synth-gentle.wav') },
-  { id: 7, name: 'Low Stringy', path: require('@/assets/sounds/synth-low-stringy.wav') },
-  { id: 8, name: 'Soft Mystery', path: require('@/assets/sounds/synth-soft-mystery.wav') },
-  { id: 9, name: 'Sunset', path: require('@/assets/sounds/synth-sunset.wav') },
-];
-
+// Define interface for audio items
 interface AudioItem {
   id: string;
   name: string;
@@ -32,18 +21,15 @@ interface AudioItem {
 
 const CreateAudioDetails = () => {
   const params = useLocalSearchParams();
-  const configId = params.configId;
-  const tempName = params.tempName;
+  const configId = params.configId as string;
+  const tempName = params.tempName as string;
 
   const [selectedAudio, setSelectedAudio] = useState<AudioItem[]>([]);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentlyPlayingId, setCurrentlyPlayingId] = useState<string | null>(null);
   const [usePresetAudio, setUsePresetAudio] = useState(true);
   const [isLoading, setIsLoading] = useState(configId ? true : false);
-  const [PSDValues, setPSDValues] = useState([0, 100]); // Default PSD range
+  const screenWidth = Dimensions.get('window').width;
 
-  // Add the audio initialization useEffect here, right after your state variables
+  // Initialize audio module
   useEffect(() => {
     const setupAudio = async () => {
       try {
@@ -61,26 +47,17 @@ const CreateAudioDetails = () => {
     };
 
     setupAudio();
-
-    return () => {
-      // Clean up audio when component unmounts
-      if (sound) {
-        sound.unloadAsync();
-      }
-    };
   }, []);
 
-  // Your existing useEffects continue here
-  // Fetch PSD range from configs
+  // Fetch config settings if editing
   useEffect(() => {
     if (configId) {
       fetchConfigSettings();
+      fetchAudioSettings();
     } else {
       setIsLoading(false);
     }
   }, [configId]);
-
-  // ...rest of your component code...
 
   const fetchConfigSettings = async () => {
     try {
@@ -91,10 +68,6 @@ const CreateAudioDetails = () => {
         .limit(1);
 
       if (error) throw error;
-
-      if (data && data.length > 0) {
-        setPSDValues([data[0].lower_PSD || 0, data[0].upper_PSD || 100]);
-      }
     } catch (error) {
       console.error('Error fetching config settings:', error);
     }
@@ -131,143 +104,9 @@ const CreateAudioDetails = () => {
     }
   };
 
-const playSound = async (item: AudioItem) => {
-  try {
-    // Stop any currently playing sound
-    if (sound) {
-      await sound.stopAsync();
-      await sound.unloadAsync();
-      setSound(null);
-      setIsPlaying(false);
-      setCurrentlyPlayingId(null);
-    }
-
-    console.log(`Attempting to load audio: ${item.name}, isPreset: ${item.isPreset}`);
-
-    if (item.isPreset) {
-      // For preset audio, we need to handle the require differently
-      try {
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          item.path,
-          { shouldPlay: false } // Load first, play later
-        );
-
-        // Check if sound loaded properly
-        const status = await newSound.getStatusAsync();
-        console.log("Sound status:", status);
-
-        if (!status.isLoaded) {
-          Alert.alert('Error', 'Sound failed to load properly');
-          return;
-        }
-
-        // Set up the onPlaybackStatusUpdate before playing
-        newSound.setOnPlaybackStatusUpdate((status) => {
-          if (status.didJustFinish) {
-            setIsPlaying(false);
-            setCurrentlyPlayingId(null);
-          }
-        });
-
-        // Now play the sound
-        await newSound.playAsync();
-        setSound(newSound);
-        setIsPlaying(true);
-        setCurrentlyPlayingId(item.id);
-      } catch (error) {
-        console.error('Error loading preset sound:', error);
-        Alert.alert('Error', `Failed to load audio: ${error.message}`);
-      }
-    } else {
-      // For uploaded audio
-      try {
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri: item.uri },
-          { shouldPlay: false } // Load first, play later
-        );
-
-        // Check if sound loaded properly
-        const status = await newSound.getStatusAsync();
-        if (!status.isLoaded) {
-          Alert.alert('Error', 'Sound failed to load properly');
-          return;
-        }
-
-        // Set up the onPlaybackStatusUpdate before playing
-        newSound.setOnPlaybackStatusUpdate((status) => {
-          if (status.didJustFinish) {
-            setIsPlaying(false);
-            setCurrentlyPlayingId(null);
-          }
-        });
-
-        // Now play the sound
-        await newSound.playAsync();
-        setSound(newSound);
-        setIsPlaying(true);
-        setCurrentlyPlayingId(item.id);
-      } catch (error) {
-        console.error('Error loading uploaded sound:', error);
-        Alert.alert('Error', `Failed to load audio: ${error.message}`);
-      }
-    }
-  } catch (error) {
-    console.error('Error playing sound:', error);
-    Alert.alert('Error', `Failed to play audio: ${error.message}`);
-  }
-};
-  const handleAudioSelect = (item: AudioItem) => {
-    // If already selected, remove it
-    if (selectedAudio.some(audio => audio.id === item.id)) {
-      setSelectedAudio(prevSelected =>
-        prevSelected.filter(audio => audio.id !== item.id)
-      );
-    } else {
-      // Add it if we have less than 10 items
-      if (selectedAudio.length < 10) {
-        setSelectedAudio(prevSelected => [...prevSelected, item]);
-      } else {
-        Alert.alert('Limit Reached', 'You can select a maximum of 10 audio clips');
-      }
-    }
-  };
-
-  const uploadAudio = async () => {
-    try {
-      if (selectedAudio.length >= 10) {
-        Alert.alert('Limit Reached', 'You can select a maximum of 10 audio clips');
-        return;
-      }
-
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'audio/*',
-        copyToCacheDirectory: true,
-      });
-
-      if (result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-
-        // Check file size (4 seconds at ~192kbps is roughly 96KB)
-        if (asset.size > 200000) { // 200KB as a safe limit
-          Alert.alert('File Too Large', 'Please select audio clips under 4 seconds');
-          return;
-        }
-
-        // Create a temporary unique ID
-        const newAudio: AudioItem = {
-          id: `upload-${Date.now()}`,
-          name: asset.name,
-          uri: asset.uri,
-          isPreset: false,
-          pitch: 0 // Will be analyzed later
-        };
-
-        setSelectedAudio(prev => [...prev, newAudio]);
-      }
-    } catch (error) {
-      console.error('Error picking audio:', error);
-      Alert.alert('Error', 'Failed to upload audio');
-    }
+  const handleAudioChange = (audios: AudioItem[]) => {
+    setSelectedAudio(audios);
+    setUsePresetAudio(audios.some(audio => audio.isPreset));
   };
 
   const analyzeAndSortAudio = () => {
@@ -284,10 +123,84 @@ const playSound = async (item: AudioItem) => {
     });
   };
 
+  // Check if other configuration details are set
+  const checkConfigurationDetails = async () => {
+    try {
+      // If we're editing an existing config
+      if (configId) {
+        const { data, error } = await supabase
+          .from('config_settings')
+          .select('*')
+          .eq('config_id', configId);
+
+        if (error) throw error;
+
+        // Check if there are any config settings
+        if (!data || data.length === 0) {
+          return false;
+        }
+
+        // Check if any of the configs has the required fields
+        const hasValidConfig = data.some(config =>
+          config.brightness !== null &&
+          config.brightness !== undefined &&
+          config.speed !== null &&
+          config.speed !== undefined &&
+          config.direction !== null &&
+          config.direction !== undefined
+        );
+
+        return hasValidConfig;
+      } else {
+        // For new configs, check if there are unsaved config settings
+        const { data, error } = await supabase
+          .from('config_settings')
+          .select('*')
+          .is('config_id', null);
+
+        if (error) throw error;
+
+        // Check if there are any unsaved config settings
+        if (!data || data.length === 0) {
+          return false;
+        }
+
+        // Check if any of the unsaved configs has the required fields
+        const hasValidConfig = data.some(config =>
+          config.brightness !== null &&
+          config.brightness !== undefined &&
+          config.speed !== null &&
+          config.speed !== undefined &&
+          config.direction !== null &&
+          config.direction !== undefined
+        );
+
+        return hasValidConfig;
+      }
+    } catch (error) {
+      console.error('Error checking configuration details:', error);
+      return false;
+    }
+  };
+
   const saveAudioConfiguration = async () => {
     try {
       if (selectedAudio.length < 3) {
         Alert.alert('Not Enough Audio', 'Please select at least 3 audio clips');
+        return;
+      }
+
+      // Check if the other configuration details are set
+      const hasConfigDetails = await checkConfigurationDetails();
+
+      if (!hasConfigDetails) {
+        Alert.alert(
+          "Missing Configuration Details",
+          "Please go back and fill out the configuration details (brightness, speed, direction) before saving audio settings.",
+          [
+            { text: "OK", onPress: () => router.back() }
+          ]
+        );
         return;
       }
 
@@ -299,8 +212,6 @@ const playSound = async (item: AudioItem) => {
         config_id: configId || null,
         use_preset: usePresetAudio,
         audio_items: JSON.stringify(sortedAudio),
-        psd_low: PSDValues[0],
-        psd_high: PSDValues[1],
         created_at: new Date().toISOString()
       };
 
@@ -351,10 +262,7 @@ const playSound = async (item: AudioItem) => {
         Alert.alert(
           "Success",
           "Audio configuration saved successfully",
-          [{ text: "OK", onPress: () => router.push({
-            pathname: "/create-config",
-            params: { tempName, returnFromDetails: true }
-          })}]
+          [{ text: "OK", onPress: () => router.back() }]  // Go back to config details
         );
       }
     } catch (error) {
@@ -367,234 +275,79 @@ const playSound = async (item: AudioItem) => {
     router.back();
   };
 
-  if (isLoading) {
-      return (
-        <SafeAreaView className="bg-white h-full">
-          <View className="flex-1 justify-center items-center">
-            <Text>Loading audio configuration...</Text>
-          </View>
-        </SafeAreaView>
-      );
-    }
 
+  if (isLoading) {
     return (
       <SafeAreaView className="bg-white h-full">
-        <ScrollView contentContainerStyle={{flexGrow: 1, paddingBottom: 20}}>
-          <View className="items-center w-full justify-center">
-            <View className="w-full px-4 mt-2">
-              <TouchableOpacity
-                onPress={handleBack}
-                className="flex-row items-center bg-lightPurple px-2 py-1 w-20 rounded-xl"
-              >
-                <Image
-                  source={icons.leftArrow}
-                  resizeMode="contain"
-                  tintColor="#47313E"
-                  className="w-4 h-4"
-                />
-                <Text className="text-white ml-3">Back</Text>
-              </TouchableOpacity>
-            </View>
+        <View className="flex-1 justify-center items-center">
+          <Text>Loading audio configuration...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
-            <Header
-              title="Audio Configuration"
-              header="Choose sounds for your sculpture"
+  return (
+    <SafeAreaView className="bg-white h-full">
+      <ScrollView contentContainerStyle={{flexGrow: 1, paddingBottom: 20}}>
+        <View className="items-center w-full justify-center">
+          <View className="w-full px-4 mt-2">
+            <TouchableOpacity
+              onPress={handleBack}
+              className="flex-row items-center bg-lightPurple px-2 py-1 w-20 rounded-xl"
+            >
+              <Image
+                source={icons.leftArrow}
+                resizeMode="contain"
+                tintColor="#47313E"
+                className="w-4 h-4"
+              />
+              <Text className="text-white ml-3">Back</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Header
+            title="Audio Configuration"
+            header="Choose sounds for your sculpture"
+          />
+
+          <View className="w-11/12 px-4">
+            <AudioSelector
+              onAudioSelected={handleAudioChange}
+              initialAudios={selectedAudio}
+              maxItems={10}
+              preset={usePresetAudio}
             />
 
-            {/* Audio Source Selection add : style={{ columnGap: 10 }} to view */}
-          <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">Choose audio source:</Text>
-          <View className="mt-4 bg-medYellow w-11/12 py-6 rounded-3xl items-center">
-            <View className="flex-row justify-center w-full px-4 space-x-6" style={{ columnGap: 10 }}>
-              <TouchableOpacity
-                onPress={() => setUsePresetAudio(true)}
-                className={`py-3 px-5 rounded-3xl ${usePresetAudio ? 'bg-darkPurple' : 'bg-lightPurple'}`}
-                style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 2 }}
-              >
-                <Text className="text-white font-medium text-l text-center">Use Preset Audio</Text>
-              </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => setUsePresetAudio(false)}
-                className={`py-3 px-5 rounded-3xl ${!usePresetAudio ? 'bg-darkPurple' : 'bg-lightPurple'}`}
-                style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 2 }}
-              >
-                <Text className="text-white font-medium text-center  text-l ">Upload My Audio</Text>
-              </TouchableOpacity>
+            {/* Save Button */}
+            <TouchableOpacity
+              onPress={saveAudioConfiguration}
+              className={`mt-8 h-12 w-full rounded-xl ${
+                selectedAudio.length >= 3 ? 'bg-darkPurple' : 'bg-gray-400'
+              } justify-center items-center`}
+              disabled={selectedAudio.length < 3}
+            >
+              <View className="flex-row items-center justify-between px-6">
+                <Text className="text-white font-medium items-center flex-1 text-center">
+                  Save audio configuration
+                </Text>
+                <Image
+                  source={icons.bookmark}
+                  tintColor="white"
+                  resizeMode="contain"
+                  className="w-5 h-5"
+                />
+              </View>
+            </TouchableOpacity>
+
+            {/* Instruction Note */}
+            <View className="mt-4 bg-blue-50 p-3 rounded-lg">
+              <Text className="text-darkPurple italic text-center">
+                Note: Make sure you've configured the other settings (brightness, speed, direction)
+                in the configuration details page before saving audio settings.
+              </Text>
             </View>
           </View>
-
-        {/* Preset Audio Section */}
-          {usePresetAudio && (
-            <>
-              <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">Select preset sounds:</Text>
-              <Text className="text-sm text-gray-500 self-start ml-7 mb-2">
-                Select at least 3 sounds (max 10)
-              </Text>
-              <View className="mt-2 bg-medYellow w-11/12 py-3 rounded-3xl">
-                <ScrollView>
-                  {PRESET_AUDIO.map((audio) => {
-                    const isSelected = selectedAudio.some(item => item.id === audio.id.toString());
-                    return (
-                      <View key={audio.id} className="flex-row items-center justify-between px-4 py-2 border-b border-lightYellow">
-                        <TouchableOpacity
-                          onPress={() => handleAudioSelect({
-                            id: audio.id.toString(),
-                            name: audio.name,
-                            path: audio.path,
-                            isPreset: true
-                          })}
-                          className="flex-row items-center flex-1"
-                        >
-                          <View
-                            className={`w-4 h-4 rounded-full mr-3 ${isSelected ? 'bg-darkPurple' : 'bg-lightPurple'}`}
-                          />
-                          <Text className={`${isSelected ? 'font-bold' : 'font-medium'} text-darkPurple`}>
-                            {audio.name}
-                          </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          onPress={() => playSound({
-                            id: audio.id.toString(),
-                            name: audio.name,
-                            path: audio.path,
-                            isPreset: true
-                          })}
-                          className={`w-10 h-10 rounded-full justify-center items-center ${
-                            currentlyPlayingId === audio.id.toString() ? 'bg-red-500' : 'bg-lightPurple'
-                          }`}
-                        >
-                          <Image
-                            source={icons.play}
-                            resizeMode="contain"
-                            tintColor="white"
-                            className="w-5 h-5"
-                            style={{
-                              marginLeft: currentlyPlayingId === audio.id.toString() ? 0 : 2
-                            }}
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            </>
-          )}
-
-          {/* Upload Audio Section */}
-          {!usePresetAudio && (
-            <>
-              <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">Upload your sounds:</Text>
-              <Text className="text-sm text-gray-500 self-start ml-7 mb-2">
-                Upload 3-10 sound files (max 4 seconds each)
-              </Text>
-              <View className="mt-2 bg-medYellow w-11/12 py-3 rounded-3xl items-center">
-                <TouchableOpacity
-                  onPress={uploadAudio}
-                  className="bg-lightPurple py-2 px-4 rounded-xl"
-                >
-                  <Text className="text-white font-medium">Upload Audio File</Text>
-                </TouchableOpacity>
-
-                <View className="mt-4 w-full px-4">
-                  <Text className="font-bold mb-2">Uploaded Files ({selectedAudio.filter(a => !a.isPreset).length}/10):</Text>
-
-                  {selectedAudio.filter(audio => !audio.isPreset).length > 0 ? (
-                    <View className="bg-white rounded-xl overflow-hidden">
-                      {selectedAudio.filter(audio => !audio.isPreset).map((audio) => (
-                        <View key={audio.id} className="flex-row items-center justify-between px-4 py-3 border-b border-lightYellow">
-                          <View className="flex-row items-center flex-1">
-                            <View className="w-4 h-4 rounded-full mr-3 bg-lightPurple" />
-                            <Text className="text-darkPurple font-medium" numberOfLines={1} ellipsizeMode="middle">
-                              {audio.name}
-                            </Text>
-                          </View>
-
-                          <View className="flex-row items-center">
-                            <TouchableOpacity
-                              onPress={() => playSound(audio)}
-                              className={`w-10 h-10 rounded-full justify-center items-center mr-2 ${
-                                currentlyPlayingId === audio.id ? 'bg-red-500' : 'bg-lightPurple'
-                              }`}
-                            >
-                              <Image
-                                source={icons.play}
-                                resizeMode="contain"
-                                tintColor="white"
-                                className="w-5 h-5"
-                                style={{
-                                  marginLeft: currentlyPlayingId === audio.id ? 0 : 2
-                                }}
-                              />
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                              onPress={() => setSelectedAudio(prev => prev.filter(a => a.id !== audio.id))}
-                              className="w-10 h-10 rounded-full bg-red-500 justify-center items-center"
-                            >
-                              <Image
-                                source={icons.trash}
-                                resizeMode="contain"
-                                tintColor="white"
-                                className="w-5 h-5"
-                              />
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  ) : (
-                    <Text className="text-gray-500 italic">No files uploaded yet</Text>
-                  )}
-                </View>
-              </View>
-            </>
-          )}
-
-          {/* Selected Audio Preview */}
-          <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">
-            Selected audio ({selectedAudio.length}/10):
-          </Text>
-          <View className="mt-2 bg-medYellow w-11/12 py-3 rounded-3xl">
-            {selectedAudio.length > 0 ? (
-              <View className="px-4">
-                {selectedAudio.map((audio) => (
-                  <View key={audio.id} className="flex-row items-center mb-2">
-                    <View
-                      className={`w-3 h-3 rounded-full mr-2 ${
-                        audio.isPreset ? 'bg-darkPurple' : 'bg-lightPurple'
-                      }`}
-                    />
-                    <Text className="text-darkMauve flex-1">{audio.name}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <Text className="text-gray-500 italic text-center">No audio selected</Text>
-            )}
-          </View>
-
-          {/* Save Button */}
-          <TouchableOpacity
-            onPress={saveAudioConfiguration}
-            className={`mt-5 h-10 w-[340px] rounded-xl ${
-              selectedAudio.length >= 3 ? 'bg-darkPurple' : 'bg-gray-400'
-            } justify-center items-center`}
-            disabled={selectedAudio.length < 3}
-          >
-            <View className="flex-row items-center justify-between px-6">
-              <Text className="text-white font-medium items-center flex-1 text-center">
-                Save audio configuration
-              </Text>
-              <Image
-                source={icons.bookmark}
-                tintColor="white"
-                resizeMode="contain"
-                className="w-5 h-5"
-              />
-            </View>
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
