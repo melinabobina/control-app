@@ -20,23 +20,27 @@ const ChooseConfig = () => {
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
-  
-      const userId = userData?.user?.id;      
+
+      const userId = userData?.user?.id;
+      console.log('Fetching configs for user:', userId); // Add this
+
       if (!userId) throw new Error("User ID not found");
-  
+
       const { data, error } = await supabase
         .from('configs')
-        .select('*') 
+        .select('*')
         .eq('user_id', userId);
-    
+
+      console.log('Fetched configs:', data); // Add this
+
       if (error) {
         setFetchError('Could not fetch the data');
         setData([]);
         console.log("Supabase query error:", error);
         return;
       }
-  
-      setData(data || []); 
+
+      setData(data || []);
       setFetchError('');
     } catch (err) {
       console.error('Error fetching configurations:', err);
