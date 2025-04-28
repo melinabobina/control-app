@@ -1,10 +1,10 @@
 import { View, Text } from 'react-native'
 import React from 'react'
 
-const ConfigDetails = ({name, brightness, speed, direction, color, selectedPanels, x, y, lower, upper, lower_PSD, upper_PSD}) => {
+const ConfigDetails = ({name, brightness, speed, direction, color, selectedPanels, x, y, lower, upper}) => {
     const waveType = name.match(/^[A-Za-z]+/)?.[0] || name;
-    const displayText = `${waveType} (${lower}-${upper}) Hz`;
-  return (
+       const displayText = `${waveType} with an intensity from (${lower}-${upper})`;
+         return (
     <View className="pt-4 w-full px-3">
       <View className="items-center mb-2">
         <View className="flex-row items-center">
@@ -17,11 +17,6 @@ const ConfigDetails = ({name, brightness, speed, direction, color, selectedPanel
 
       <View className="items-center">
         <View className="flex-row items-center pt-2">
-            <Text className="font-medium text-black">PSD range: </Text>
-            <Text className="">{lower_PSD} [dBm/Hz] - {upper_PSD} [dBm/Hz]</Text>
-        </View>
-
-        <View className="flex-row items-center">
             <Text className="font-medium text-black">Brightness: </Text>
             <Text className="">{brightness}%</Text>
         </View>
@@ -35,6 +30,7 @@ const ConfigDetails = ({name, brightness, speed, direction, color, selectedPanel
             <Text className="font-medium text-black">Direction: </Text>
             <Text className="">{direction}</Text>
         </View>
+
       </View>
 
       <View className="items-center">
