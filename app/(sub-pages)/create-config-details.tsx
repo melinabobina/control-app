@@ -14,7 +14,7 @@ const CreateConfigDetails = () => {
   const params = useLocalSearchParams();
   const configId = params.configId;
   const settingId = params.settingId;
-  const isEditing = !!settingId; 
+  const isEditing = !!settingId;
 
   const tempName = params.tempName;
   const tempHeight = params.tempHeight;
@@ -23,7 +23,6 @@ const CreateConfigDetails = () => {
 
   const [selectedSignal, setSelectedSignal] = useState("Alpha (8 - 12 Hz)")
   const [rangeValues, setRangeValues] = useState([8, 12]); // Initial range values
-  const [PSDValues, setPSDValues] = useState([0, 100]);
   const screenWidth = Dimensions.get('window').width;
   const { x, y } = useConfigStore();
   const [selectedPanels, setSelectedPanels] = useState(new Set());
@@ -39,13 +38,14 @@ const CreateConfigDetails = () => {
   const [showModal, setShowModal] = useState(false);
   const [isFormValid, setIsFormValid] = useState(false);
   const [isLoading, setIsLoading] = useState(isEditing);
+  const [hasAudio, setHasAudio] = useState(false);
 
   const signalRanges = {
-    "Alpha (8 - 12 Hz)": [8, 12],
-    "Beta (12 - 30 Hz)": [12, 30],
-    "Gamma (30 - 50 Hz)": [30, 50],
-    "Theta (4 - 8 Hz)": [4, 8],
-    "Delta (<4 Hz)": [0, 4]
+    "Alpha (8 - 12 Hz)": [0, 100],
+    "Beta (12 - 30 Hz)": [0, 100],
+    "Gamma (30 - 50 Hz)": [0, 100],
+    "Theta (4 - 8 Hz)": [0, 100],
+    "Delta (<4 Hz)": [0, 100]
   };
 
   useEffect(() => {
@@ -96,6 +96,31 @@ const CreateConfigDetails = () => {
       setIsLoading(false);
     }
   }, [settingId, isEditing]);
+
+useEffect(() => { // AUDIO AUDIO AUDIO AUDIO AUDIO
+    const checkAudioSettings = async () => {
+      if (!configId) return;
+
+      try {
+        const { data: audioData, error } = await supabase
+          .from('audio_settings')
+          .select('*')
+          .eq('config_id', configId)
+          .single();
+
+        if (audioData && !error) {
+          setHasAudio(true);
+        } else {
+          setHasAudio(false);
+        }
+      } catch (error) {
+        console.log('No audio settings found for this configuration');
+        setHasAudio(false);
+      }
+    };
+
+    checkAudioSettings();
+  }, [configId]);
 
   const onSelectColor = ({ hex }) => {
     setSelectedColor(hex) 
@@ -152,14 +177,14 @@ const CreateConfigDetails = () => {
   };
 
   useEffect(() => {
-    const formIsValid = 
-      brightness.trim() !== "" && 
-      speed.trim() !== "" && 
+    const formIsValid =
+      brightness.trim() !== "" &&
+      speed.trim() !== "" &&
       direction.trim() !== "" &&
       !brightnessError &&
       !speedError &&
       !directionError;
-    
+
     setIsFormValid(formIsValid);
   }, [brightness, speed, direction, brightnessError, speedError, directionError]);
 
@@ -191,8 +216,6 @@ const CreateConfigDetails = () => {
           speed: parseFloat(speed),
           direction: direction.toLowerCase(),
           color: selectedColor,
-          lower_PSD: PSDValues[0],
-          upper_PSD: PSDValues[1],
           config_id: configId || null // Make sure to pass the configId
         };
         
@@ -236,16 +259,44 @@ const CreateConfigDetails = () => {
     }
   };
 
+    const handleAudioPress = () => {
+      if (isFormValid) {
+        if (isEditing && configId) {
+          router.push({
+            pathname: "/(sub-pages)/create-audio-details",
+            params: { configId, isCreatingConfig: true }
+          });
+        } else {
+          router.push({
+            pathname: '/(sub-pages)/create-audio-details',
+            params: {
+              tempName: tempName,
+              tempHeight: tempHeight,
+              tempX: tempX,
+              tempY: tempY,
+              isCreatingConfig: true
+            }
+          });
+        }
+      } else {
+        Alert.alert(
+          "Missing Information",
+          "Please fill out all required fields before adding audio.",
+          [{ text: "OK" }]
+        );
+      }
+    };
+
   const handleBack = () => {
     router.back();
   };
 
   return (
-    <SafeAreaView className="bg-white h-full">  
+    <SafeAreaView className="bg-white h-full">
       <ScrollView contentContainerStyle={{flexGrow: 1, paddingBottom: 20}}>
         <View className="items-center w-full justify-center">
           <View className="w-full px-4 mt-2">
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={handleBack}
               className="flex-row items-center bg-lightPurple px-2 py-1 w-20 rounded-xl"
             >
@@ -259,7 +310,7 @@ const CreateConfigDetails = () => {
             </TouchableOpacity>
           </View>
 
-          <Header 
+          <Header
             title={isEditing ? "Edit configuration" : "Create a new configuration"}
             header={isEditing ? "Edit your configuration below" : "Add and edit new ranges below"}
           />
@@ -272,10 +323,10 @@ const CreateConfigDetails = () => {
             <>
               <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">Choose a signal:</Text>
               <View className="mt-4 bg-medYellow w-11/12 py-3 rounded-3xl flex-wrap flex-row justify-center items-center">
-                {["Alpha (8 - 12 Hz)", "Beta (12 - 30 Hz)", "Gamma (30 - 50 Hz)", 
+                {["Alpha (8 - 12 Hz)", "Beta (12 - 30 Hz)", "Gamma (30 - 50 Hz)",
                   "Theta (4 - 8 Hz)", "Delta (<4 Hz)"].map((signal, index) => (
                   <View key={signal} className={`w-1/2 mt-5 ${index === 4 ? "w-full flex items-center" : "justify-center items-center"}`}>
-                    <SignalButton 
+                    <SignalButton
                       title={signal}
                       isSelected={selectedSignal === signal}
                       onPress={() => setSelectedSignal(signal)}
@@ -285,8 +336,11 @@ const CreateConfigDetails = () => {
               </View>
 
               <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">Specify a range:</Text>
-              <View className="mt-4 bg-medYellow w-11/12 h-48 py-3 rounded-3xl items-center">
+              <View className="mt-4 bg-medYellow w-11/12 h-52 py-3 rounded-3xl items-center">
                 <Text className="text-darkPurple px-14 pb-2 text-center font-medium mt-4">
+                  Select a range (0 to 100) of the power band intensity.
+                </Text>
+                <Text className="text-darkPurple px-14 text-center font-bold">
                   {selectedSignal}
                 </Text>
 
@@ -322,54 +376,10 @@ const CreateConfigDetails = () => {
 
                 <View className="flex-row">
                   <Text className="text-darkPurple px-2 pb-2 text-center font-normal mt-4">
-                    Selected range: 
+                    Selected range:
                   </Text>
                   <Text className="text-darkPurple pb-2 text-center font-normal mt-4">
-                    {rangeValues[0]} [Hz] to {rangeValues[1]} [Hz]
-                  </Text>
-                </View>
-              </View>
-
-              <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">
-                Specify a power spectral density range:
-              </Text>
-              <View className="mt-4 bg-medYellow w-11/12 py-3 rounded-3xl items-center">
-                <MultiSlider
-                    values={PSDValues}
-                    onValuesChange={(values) => setPSDValues(values)}
-                    min={0}
-                    max={100}
-                    step={1}
-                    allowOverlap={false}
-                    snapped
-                    containerStyle={{
-                      height: 40,
-                      marginTop: 10
-                    }}
-                    selectedStyle={{
-                      backgroundColor: '#47313E'
-                    }}
-                    unselectedStyle={{
-                      backgroundColor: '#E5E7EB' // light gray
-                    }}
-                    sliderLength={screenWidth * 0.75} // 75% of screen width
-                    markerStyle={{
-                      backgroundColor: '#47313E',
-                      height: 20,
-                      width: 20,
-                    }}
-                    trackStyle={{
-                      height: 6,
-                      borderRadius: 3,
-                    }}
-                  />
-
-                <View className="flex-row">
-                  <Text className="text-darkPurple px-2 pb-2 text-center font-normal mt-4">
-                    Selected range: 
-                  </Text>
-                  <Text className="text-darkPurple pb-2 text-center font-normal mt-4">
-                    {PSDValues[0]} [dBm/Hz] to {PSDValues[1]} [dBm/Hz]
+                    {rangeValues[0]} to {rangeValues[1]}
                   </Text>
                 </View>
               </View>
@@ -403,7 +413,7 @@ const CreateConfigDetails = () => {
                 <View className="w-full mb-4">
                   <View className="flex-row items-center space-x-4 w-full">
                     <Text className="text-darkPurple font-medium">Brightness:   </Text>
-                    <TextInput 
+                    <TextInput
                       className="bg-lightYellow px-4 py-2 rounded-lg flex-1"
                       value={brightness}
                       onChangeText={handleBrightnessChange}
@@ -419,7 +429,7 @@ const CreateConfigDetails = () => {
                 <View className="w-full mb-4">
                   <View className="flex-row items-center space-x-4 w-full">
                     <Text className="text-darkPurple font-medium">Speed:   </Text>
-                    <TextInput 
+                    <TextInput
                       className="bg-lightYellow px-4 py-2 rounded-lg flex-1"
                       value={speed}
                       onChangeText={handleSpeedChange}
@@ -435,7 +445,7 @@ const CreateConfigDetails = () => {
                 <View className="w-full mb-4">
                   <View className="flex-row items-center space-x-4 w-full">
                     <Text className="text-darkPurple font-medium">Direction:   </Text>
-                    <TextInput 
+                    <TextInput
                       className="bg-lightYellow px-4 py-2 rounded-lg flex-1"
                       value={direction}
                       onChangeText={handleDirectionChange}
@@ -450,22 +460,22 @@ const CreateConfigDetails = () => {
                 <View className="flex-row items-center space-x-4 w-full mb-4">
                   <Text className="text-darkPurple font-medium">Color:   </Text>
                   <View className="justify-center flex-1">
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       onPress={() => setShowModal(true)}
                       className="bg-lightPurple px-3 py-3 rounded-lg"
                     >
                       <Text className="text-white font-medium text-center">Choose your color</Text>
                     </TouchableOpacity>
 
-                    <Modal 
-                      visible={showModal} 
+                    <Modal
+                      visible={showModal}
                       animationType='slide'
                       transparent={true}
                     >
                       <View className="flex-1 justify-center items-center bg-black/50">
                         <View className="bg-white p-6 rounded-xl w-11/12">
-                          <ColorPicker 
-                            style={{ width: '100%' }} 
+                          <ColorPicker
+                            style={{ width: '100%' }}
                             value={selectedColor}
                             onComplete={onSelectColor}
                           >
@@ -476,7 +486,7 @@ const CreateConfigDetails = () => {
                             <Swatches />
                           </ColorPicker>
 
-                          <TouchableOpacity 
+                          <TouchableOpacity
                             onPress={() => setShowModal(false)}
                             className="bg-lightPurple mt-4 px-6 py-3 rounded-lg"
                           >
@@ -494,7 +504,25 @@ const CreateConfigDetails = () => {
                 </View>
               </View>
 
-              <TouchableOpacity 
+                <TouchableOpacity  // AUDIO AUDIO AUDIO AUDIO AUDIO AUDIO AUDIO AUDIO AUDIO
+                    activeOpacity={isFormValid ? 0.7 : 1}
+                    className={`${isFormValid ? 'bg-lightPurple' : 'bg-gray-400'} w-96 items-center justify-center h-12 rounded-2xl mt-4`}
+                    onPress={handleAudioPress}
+                >
+                  <View className="flex-row items-center justify-between w-full px-5">
+                    <View className="flex-1 items-center">
+                      <Text className="text-white font-medium">{hasAudio ? "Edit Audio (Optional)" : "Add Audio (Optional)"}</Text>
+                    </View>
+                    <Image
+                      source={hasAudio ? icons.edit : icons.plus}  // Change the icon based on audio status
+                      resizeMode="contain"
+                      tintColor="white"
+                      className="w-6 h-6"
+                    />
+                  </View>
+                </TouchableOpacity>
+
+              <TouchableOpacity
                 onPress={handlePress}
                 activeOpacity={isFormValid ? 0.7 : 1}
                 className={`mt-5 h-10 w-[340px] rounded-xl ${isFormValid ? 'bg-darkPurple' : 'bg-gray-400'} justify-center items-center`}>
@@ -511,6 +539,7 @@ const CreateConfigDetails = () => {
                   />
                 </View>
               </TouchableOpacity>
+
             </>
           )}
         </View>
