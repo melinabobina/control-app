@@ -8,30 +8,59 @@ import ConfigPlay from '@/components/ConfigPlay';
 import ConfigDetails from '@/components/ConfigDetails';
 import StartButton from '@/components/StartButton';
 import { useConfigStore } from '../../store';
+import ESPCommunicator from '../../utils/espCommunication';
+import { Audio } from 'expo-av';
 
 const PlayConfig = () => {
   const { configId } = useLocalSearchParams();
   const eegData = useConfigStore((state) => state.eegData);
-  const wave_type = eegData?.wave_type ?? '';
-  const dominant_freq = eegData?.dominant_freq ?? 0;
-  const psd = eegData?.psd ?? 0;
-  const confidence = eegData?.confidence ?? 0;
+
+  // EEG data values
+  const dominant_band = eegData?.dominant_band ?? '';
+  const alpha_band = eegData?.alpha_band ?? 0;
+  const beta_band = eegData?.beta_band ?? 0;
+  const theta_band = eegData?.theta_band ?? 0;
+  const delta_band = eegData?.delta_band ?? 0;
+  const gamma_band = eegData?.gamma_band ?? 0;
+  const peak_alpha_freq = eegData?.peak_alpha_freq ?? 0;
   const timestamp = eegData?.timestamp ?? '';
-  
+
   const [fetchError, setFetchError] = useState('');
   const [data, setData] = useState(null);
   const [configData, setConfigData] = useState(null);
   const [logs, setLogs] = useState([]);
+  const [espComm, setEspComm] = useState<ESPCommunicator | null>(null);
+  const [previousActiveConfigs, setPreviousActiveConfigs] = useState([]);
+  const [audioSettings, setAudioSettings] = useState(null);
+  const [soundObjects, setSoundObjects] = useState<Map<string, Audio.Sound>>(new Map());
+  const [playingAudio, setPlayingAudio] = useState<Set<string>>(new Set());
+
+  // Get socket from StartButton's reference
+  useEffect(() => {
+    const socket = typeof window !== 'undefined' && window.currentSocket ? window.currentSocket : null;
+    if (socket) {
+      setEspComm(new ESPCommunicator(socket));
+    }
+  }, []);
+
+  // Clean up audio on unmount
+  useEffect(() => {
+    return () => {
+      soundObjects.forEach((sound) => {
+        sound.unloadAsync();
+      });
+    };
+  }, []);
 
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return '';
-    
+
     try {
       const date = new Date(timestamp);
-        if (isNaN(date.getTime())) {
-            return timestamp;
+      if (isNaN(date.getTime())) {
+        return timestamp;
       }
-      
+
       return date.toLocaleString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -47,15 +76,15 @@ const PlayConfig = () => {
   };
 
   useEffect(() => {
-    if (wave_type && timestamp) {
+    if (dominant_band && timestamp) {
       const formattedTime = formatTimestamp(timestamp);
-      const logEntry = `Wave: ${wave_type}, Freq: ${dominant_freq.toFixed(2)} Hz, PSD: ${psd.toFixed(2)}, Conf: ${confidence}, Time: ${formattedTime}`;
+      const logEntry = `Band: ${dominant_band}, Alpha: ${alpha_band.toFixed(2)}, Beta: ${beta_band.toFixed(2)}, Theta: ${theta_band.toFixed(2)}, Time: ${formattedTime}`;
       setLogs((prevLogs) => {
         const updatedLogs = [logEntry, ...prevLogs];
-        return updatedLogs.slice(0, 10); // Keep only latest 10
+        return updatedLogs.slice(0, 10);
       });
     }
-  }, [wave_type, dominant_freq, psd, confidence, timestamp]);
+  }, [dominant_band, alpha_band, beta_band, theta_band, delta_band, gamma_band, timestamp]);
 
   useFocusEffect(
     useCallback(() => {
@@ -95,6 +124,18 @@ const PlayConfig = () => {
         return;
       }
 
+      // Fetch audio settings
+      const { data: audioData, error: audioError } = await supabase
+        .from('audio_settings')
+        .select('*')
+        .eq('config_id', configId)
+        .single();
+
+      if (audioData) {
+        setAudioSettings(audioData);
+        await loadAudioFiles(audioData);
+      }
+
       setData(settingsData);
       setConfigData(configTableData);
       setFetchError('');
@@ -104,15 +145,138 @@ const PlayConfig = () => {
     }
   };
 
+  const loadAudioFiles = async (audioData) => {
+    if (!audioData?.audio_items) return;
+
+    try {
+      const audioItems = JSON.parse(audioData.audio_items);
+      const newSoundObjects = new Map();
+
+      for (const item of audioItems) {
+        if (item.isPreset) {
+          // For preset audio files
+          const { sound } = await Audio.Sound.createAsync(item.path);
+          newSoundObjects.set(item.id, sound);
+        } else if (item.uri) {
+          // For uploaded audio files
+          const { sound } = await Audio.Sound.createAsync({ uri: item.uri });
+          newSoundObjects.set(item.id, sound);
+        }
+      }
+
+      setSoundObjects(newSoundObjects);
+    } catch (error) {
+      console.error('Error loading audio files:', error);
+    }
+  };
+
   const activeConfigs = useMemo(() => {
-    if (!data) return [];
-    return data.filter(config =>
-      dominant_freq >= config.lower_range &&
-      dominant_freq <= config.upper_range &&
-      psd >= config.lower_PSD &&
-      psd <= config.upper_PSD
-    );
-  }, [data, dominant_freq, psd]);
+    if (!data || !eegData) return [];
+
+    return data.filter(config => {
+      const bandName = config.setting_name.split(' ')[0].toLowerCase();
+
+      let bandValue = 0;
+      switch (bandName) {
+        case 'alpha':
+          bandValue = alpha_band;
+          break;
+        case 'beta':
+          bandValue = beta_band;
+          break;
+        case 'theta':
+          bandValue = theta_band;
+          break;
+        case 'delta':
+          bandValue = delta_band;
+          break;
+        case 'gamma':
+          bandValue = gamma_band;
+          break;
+        default:
+          return false;
+      }
+
+      const lowerIntensity = config.lower_intensity || 0;
+      const upperIntensity = config.upper_intensity || 1;
+
+      return bandValue >= lowerIntensity && bandValue <= upperIntensity;
+    });
+  }, [data, eegData, alpha_band, beta_band, theta_band, delta_band, gamma_band]);
+
+  // Send updates to ESP and handle audio when active configs change
+  useEffect(() => {
+    if (activeConfigs.length !== previousActiveConfigs.length) {
+      // Send configurations to ESP
+      if (espComm && configData) {
+        activeConfigs.forEach(config => {
+          espComm.sendConfig(config, configData.panels_x, configData.panels_y);
+        });
+
+        // If no configs are active, send stop command
+        if (activeConfigs.length === 0) {
+          espComm.sendStop();
+        }
+      }
+
+      // Handle audio playback based on active configs
+      handleAudioPlayback(activeConfigs);
+
+      setPreviousActiveConfigs(activeConfigs);
+    }
+  }, [activeConfigs, espComm, configData]);
+
+  const handleAudioPlayback = async (activeConfigs) => {
+    if (!audioSettings?.audio_items || !soundObjects.size) return;
+
+    try {
+      const audioItems = JSON.parse(audioSettings.audio_items);
+
+      // Stop currently playing audio not in active configs
+      for (const [audioId, sound] of soundObjects) {
+        if (playingAudio.has(audioId) && !activeConfigs.some(config => shouldPlayAudio(config, audioId))) {
+          await sound.stopAsync();
+          playingAudio.delete(audioId);
+        }
+      }
+
+      // Start audio for active configs
+      for (const config of activeConfigs) {
+        const audioId = determineAudioForConfig(config, audioItems);
+        if (audioId && !playingAudio.has(audioId)) {
+          const sound = soundObjects.get(audioId);
+          if (sound) {
+            await sound.playAsync();
+            await sound.setIsLoopingAsync(true);
+            playingAudio.add(audioId);
+          }
+        }
+      }
+
+      setPlayingAudio(new Set(playingAudio));
+    } catch (error) {
+      console.error('Error handling audio playback:', error);
+    }
+  };
+
+  const shouldPlayAudio = (config, audioId) => {
+    // Logic to determine if this audio should play for this config
+    // This can be customized based on your requirements
+    return true;
+  };
+
+  const determineAudioForConfig = (config, audioItems) => {
+    // Logic to select appropriate audio based on config
+    // For now, return the first audio item
+    return audioItems[0]?.id;
+  };
+
+  // Send EEG data to ESP periodically
+  useEffect(() => {
+    if (espComm && eegData) {
+      espComm.sendEEGData(eegData);
+    }
+  }, [eegData, espComm]);
 
   const handleBack = () => {
     router.back();
@@ -136,7 +300,7 @@ const PlayConfig = () => {
             </TouchableOpacity>
           </View>
 
-          <Header 
+          <Header
             title={"Play your configuration"}
             header={"Enjoy the performance!"}
           />
@@ -179,10 +343,8 @@ const PlayConfig = () => {
                     selectedPanels={config.selected_panels}
                     x={configData?.panels_x}
                     y={configData?.panels_y}
-                    lower={config.lower_range}
-                    upper={config.upper_range}
-                    lower_PSD={config.lower_PSD}
-                    upper_PSD={config.upper_PSD}
+                    lower={config.lower_intensity || 0}
+                    upper={config.upper_intensity || 1}
                   />
                 </View>
               ))}
