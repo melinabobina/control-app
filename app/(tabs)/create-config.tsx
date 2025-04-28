@@ -1,5 +1,6 @@
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Image, Alert } from 'react-native'
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import { Audio } from 'expo-av';
 import Header from '@/components/Header';
 import { TextInput } from "@/components/TextInput";
 import { router, useLocalSearchParams } from 'expo-router';
@@ -7,10 +8,16 @@ import { icons } from '@/constants';
 import { useConfigStore } from '../../store';
 import ConfigRange from '@/components/ConfigRange';
 import { supabase } from '@/lib/supabase';
+import AudioSelector from '@/components/audio/AudioSelector';
 
 const CreateConfig = () => {
   const { configId } = useLocalSearchParams();
-  const { x, y, name, height, setX, setY, setName, setHeight, resetConfig } = useConfigStore();
+  const {
+    x, y, name, setX, setY, setName, resetConfig,
+    hasAudio, setHasAudio, audioItems, setAudioItems,
+    configId: storeConfigId, setConfigId
+  } = useConfigStore();
+
   const params = useLocalSearchParams();
   const [isFormValid, setIsFormValid] = useState(false);
   const [fetchError, setFetchError] = useState('');
@@ -20,42 +27,136 @@ const CreateConfig = () => {
   const isInitialMount = useRef(true);
   const settingsRefreshToken = useRef(0);
 
+  // Audio section state
+  const [audioSectionExpanded, setAudioSectionExpanded] = useState(false);
+  const [selectedAudio, setSelectedAudio] = useState([]);
+  const [usePresetAudio, setUsePresetAudio] = useState(true);
+  const [isAudioValid, setIsAudioValid] = useState(false);
+
+  // For session handling
+  const ensureAuthSession = async () => {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error) {
+        console.error('Auth session error:', error);
+        return null;
+      }
+
+      if (!data?.session) {
+        console.log('No active session found');
+        return null;
+      }
+
+      return data.session;
+    } catch (error) {
+      console.error('Error checking auth session:', error);
+      return null;
+    }
+  };
+
+  // Initialize audio module
+  useEffect(() => {
+    const setupAudio = async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+          playThroughEarpieceAndroid: false,
+          shouldDuckAndroid: true,
+        });
+        console.log("Audio module initialized successfully");
+      } catch (error) {
+        console.error("Error initializing audio module:", error);
+      }
+    };
+
+    setupAudio();
+  }, []);
+
   useEffect(() => {
     // Only reset on first mount if no configId is provided
     if (!configId) {
       resetConfig();
       setData(null);
       setHasPanelLock(false);
+      setSelectedAudio([]);
     }
     setIsEditMode(!!configId);
-    
+
     isInitialMount.current = false;
   }, []);
-  
+
   // This effect runs when configId changes after initial mount
   useEffect(() => {
     if (!isInitialMount.current && configId !== undefined) {
       console.log("ConfigId changed to:", configId);
-      
+
       // Reset when navigating to a different config
       resetConfig();
       setData(null);
       setHasPanelLock(false);
-      
+      setSelectedAudio([]);
+
       if (configId) {
         setIsEditMode(true);
         loadExistingConfig(configId);
+        fetchAudioSettings(configId);
       } else {
         setIsEditMode(false);
       }
     }
   }, [configId]);
-  
+
+  // Fetch audio settings
+  const fetchAudioSettings = async (id) => {
+    try {
+      if (!id) return;
+
+      const { data, error } = await supabase
+        .from('audio_settings')
+        .select('*')
+        .eq('config_id', id);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const audioSettings = data[0];
+        setUsePresetAudio(audioSettings.use_preset);
+        setHasAudio(true);
+
+        // Parse stored audio items
+        if (audioSettings.audio_items) {
+          try {
+            const parsedItems = JSON.parse(audioSettings.audio_items);
+            setSelectedAudio(parsedItems);
+            setAudioItems(parsedItems);
+            setIsAudioValid(parsedItems.length >= 3);
+          } catch (e) {
+            console.error('Error parsing audio items:', e);
+          }
+        }
+      } else {
+        setHasAudio(false);
+        setSelectedAudio([]);
+        setIsAudioValid(false);
+      }
+    } catch (error) {
+      console.error('Error fetching audio settings:', error);
+    }
+  };
+
   useEffect(() => {
     if (isEditMode || configId) {
       fetchConfigSettings();
     }
   }, [configId, settingsRefreshToken.current]);
+
+  // Validate audio selection
+  useEffect(() => {
+    setIsAudioValid(selectedAudio.length >= 3);
+  }, [selectedAudio]);
 
   // Update panel lock based on data
   useEffect(() => {
@@ -84,9 +185,9 @@ const CreateConfig = () => {
       if (data) {
         console.log("Config data loaded:", data);
         setName(data.config_name || '');
-        setHeight(data.starting_height ? data.starting_height.toString() : '');
         setX(data.panels_x ? data.panels_x.toString() : '');
         setY(data.panels_y ? data.panels_y.toString() : '');
+        setConfigId(id); // Set the config ID in global store
       }
     } catch (error) {
       console.error('Exception loading configuration:', error);
@@ -100,21 +201,21 @@ const CreateConfig = () => {
       let query = supabase
         .from('config_settings')
         .select('*');
-      
+
       if (configId) {
         query = query.eq('config_id', configId);
       } else {
         query = query.is('config_id', null);
       }
-  
+
       const { data, error } = await query;
-  
+
       if (error) {
         setFetchError('Could not fetch the data');
         console.log(error);
         return;
       }
-  
+
       if (data) {
         setData(data);
         // Only set panel lock based on data
@@ -130,16 +231,16 @@ const CreateConfig = () => {
   };
 
   const handleDeleteConfig = async (id) => {
-    try {      
+    try {
       if (!id) {
         throw new Error('No ID provided');
       }
-      
+
       const { error } = await supabase
         .from('config_settings')
         .delete()
         .eq('id', id);
-  
+
       if (error) {
         throw error;
       }
@@ -153,17 +254,15 @@ const CreateConfig = () => {
       Alert.alert("Error", "Failed to delete configuration setting: " + error.message);
     }
   };
-  
-  useEffect(() => {
-    const formIsValid = 
-      name.trim() !== "" && 
-      height.trim() !== "" && 
-      x.trim() !== "" && 
-      y.trim() !== "";
-    
-    setIsFormValid(formIsValid);
-  }, [name, height, x, y]);
 
+  useEffect(() => {
+    const formIsValid =
+      (name && name.trim() !== "") &&
+      (x && x.trim() !== "") &&
+      (y && y.trim() !== "");
+
+    setIsFormValid(formIsValid);
+  }, [name, x, y]);
 
   const updateConfigSettings = async (configId) => {
     try {
@@ -171,7 +270,7 @@ const CreateConfig = () => {
         .from('config_settings')
         .update({ config_id: configId })
         .is('config_id', null);
-  
+
       if (error) throw error;
 
       console.log("Successfully updated config_settings");
@@ -180,24 +279,99 @@ const CreateConfig = () => {
     }
   };
 
+  // Handle audio selection
+  const handleAudioChange = (audios) => {
+    setSelectedAudio(audios);
+    setAudioItems(audios);
+    setUsePresetAudio(audios.some(audio => audio.isPreset));
+    setHasAudio(audios.length > 0);
+  };
+
+  // Sort audio items
+  const analyzeAndSortAudio = () => {
+    return [...selectedAudio].sort((a, b) => {
+      if (a.isPreset && b.isPreset) {
+        return Number(a.id) - Number(b.id);
+      } else if (!a.isPreset && !b.isPreset) {
+        return a.name.localeCompare(b.name);
+      } else {
+        return a.isPreset ? -1 : 1;
+      }
+    });
+  };
+
+  const saveAudioConfiguration = async (configId) => {
+    try {
+      if (!configId) return;
+
+      const sortedAudio = analyzeAndSortAudio();
+
+      // Prepare data for saving
+      const audioSettings = {
+        config_id: configId,
+        use_preset: usePresetAudio,
+        audio_items: JSON.stringify(sortedAudio),
+        created_at: new Date().toISOString()
+      };
+
+      // Check if audio settings already exist for this config_id
+      const { data: existingData, error: checkError } = await supabase
+        .from('audio_settings')
+        .select('id')
+        .eq('config_id', configId);
+
+      if (checkError) throw checkError;
+
+      if (existingData && existingData.length > 0) {
+        // Update existing audio settings
+        const { error } = await supabase
+          .from('audio_settings')
+          .update(audioSettings)
+          .eq('config_id', configId);
+
+        if (error) throw error;
+      } else {
+        // Insert new audio settings for existing config
+        const { error } = await supabase
+          .from('audio_settings')
+          .insert([audioSettings]);
+
+        if (error) throw error;
+      }
+
+      console.log("Audio configuration saved successfully for config ID:", configId);
+
+    } catch (error) {
+      console.error('Error saving audio configuration:', error);
+      throw error;
+    }
+  };
+
   const handleSavePress = async () => {
     if (isFormValid) {
       try {
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError) throw userError;
+        // Ensure we have a valid session before proceeding
+        const session = await ensureAuthSession();
+        if (!session) {
+          Alert.alert(
+            "Session Expired",
+            "Your login session has expired. Please log in again.",
+            [{ text: "OK", onPress: () => router.replace('/sign-in') }]
+          );
+          return;
+        }
 
-        const userId = userData?.user?.id;
-        if (!userId) throw new Error("User ID not found");
+        // Get user ID from the validated session
+        const userId = session.user.id;
 
         const configData = {
           user_id: userId,
           config_name: name,
-          starting_height: height,
           panels_x: x,
           panels_y: y,
           favorite: isEditMode ? undefined : false,
         };
-  
+
         let savedConfigId = null;
 
         if (isEditMode) {
@@ -206,10 +380,10 @@ const CreateConfig = () => {
             .from('configs')
             .update(configData)
             .eq('id', configId);
-          
+
           if (error) throw error;
           savedConfigId = configId;
-          
+
           await updateConfigSettings(savedConfigId);
         } else {
           // Create new config
@@ -218,38 +392,53 @@ const CreateConfig = () => {
             .insert([configData])
             .select('id')
             .single();
-      
+
           if (error) throw error;
           savedConfigId = data.id;
           await updateConfigSettings(savedConfigId);
         }
-        
+
+        // Save audio configuration if we have selected audio items
+        if (selectedAudio.length > 0) {
+          await saveAudioConfiguration(savedConfigId);
+        }
+
         resetConfig();
         setIsEditMode(false);
         setData(null);
         setHasPanelLock(false);
-        
+        setSelectedAudio([]);
+
         router.push('/choose-config');
       } catch (error) {
         console.error('Error saving configuration:', error);
-        Alert.alert('Error', 'Failed to save configuration');
+
+        // Handle authentication errors specifically
+        if (error.message && error.message.includes("Auth session missing")) {
+          Alert.alert(
+            "Session Expired",
+            "Your login session has expired. Please log in again.",
+            [{ text: "OK", onPress: () => router.replace('/sign-in') }]
+          );
+        } else {
+          Alert.alert('Error', 'Failed to save configuration: ' + error.message);
+        }
       }
     } else {
       Alert.alert(
         "Missing Information",
-        "Please fill out all required fields (name, starting height, and number of panels) before saving your configuration.",
+        "Please fill out all required fields before saving your configuration.",
         [{ text: "OK" }]
       );
     }
   };
-  
+
   useEffect(() => {
     // Check if returning from details page
     if (params?.returnFromDetails) {
       // Restore temp values if not in edit mode
       if (!configId && params.tempName) {
         setName(params.tempName);
-        setHeight(params.tempHeight);
         setX(params.tempX);
         setY(params.tempY);
       }
@@ -262,14 +451,13 @@ const CreateConfig = () => {
       if (isEditMode) {
         router.push({
           pathname: "/(sub-pages)/create-config-details",
-          params: { configId, isCreatingConfig: true } 
+          params: { configId, isCreatingConfig: true }
         });
       } else {
         router.push({
           pathname: '/(sub-pages)/create-config-details',
           params: {
             tempName: name,
-            tempHeight: height,
             tempX: x,
             tempY: y,
             isCreatingConfig: true
@@ -279,38 +467,11 @@ const CreateConfig = () => {
     } else {
       Alert.alert(
         "Missing Information",
-        "Please fill out all required fields (name, starting height, and number of panels) before adding a range.",
+        "Please fill out all required fields before adding a range.",
         [{ text: "OK" }]
       );
     }
   };
-    const handleAudioPress = () => {
-      if (isFormValid) {
-        if (isEditMode) {
-          router.push({
-            pathname: "/(sub-pages)/create-audio-details",
-            params: { configId, isCreatingConfig: true }
-          });
-        } else {
-          router.push({
-            pathname: '/(sub-pages)/create-audio-details',
-            params: {
-              tempName: name,
-              tempHeight: height,
-              tempX: x,
-              tempY: y,
-              isCreatingConfig: true
-            }
-          });
-        }
-      } else {
-        Alert.alert(
-          "Missing Information",
-          "Please fill out all required fields before adding audio.",
-          [{ text: "OK" }]
-        );
-      }
-    };
 
   const showPanelLockMessage = () => {
     if (hasPanelLock) {
@@ -323,10 +484,10 @@ const CreateConfig = () => {
   };
 
   return (
-    <SafeAreaView className="bg-white h-full">  
+    <SafeAreaView className="bg-white h-full">
       <ScrollView contentContainerStyle={{flexGrow: 1, paddingBottom: 20}}>
         <View className="items-center w-full justify-center">
-          <Header 
+          <Header
             title={isEditMode ? "Edit configuration" : "Create a new configuration"}
             header={isEditMode ? "Edit configuration details below" : "Add and edit new ranges below"}
           />
@@ -353,23 +514,10 @@ const CreateConfig = () => {
 
           <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">Name your configuration:</Text>
           <View className="mt-4 bg-medYellow w-11/12 h-24 py-3 rounded-3xl justify-center items-center">
-            <TextInput 
+            <TextInput
               value={name}
               onChangeText={setName}
               placeholder="Enter name here"
-            />
-          </View>
-
-          <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">Enter a starting height:</Text>
-          <View className="mt-4 bg-medYellow w-11/12 h-36 py-3 rounded-3xl justify-center items-center">
-            <Text className="text-darkPurple px-8 pb-2 text-center font-medium">
-              Enter, in meters, the distance from the ceiling you would like the sculpture to begin at:
-            </Text>
-            <TextInput 
-              value={height}
-              onChangeText={setHeight}
-              placeholder="Enter height here"
-              keyboardType="numeric"
             />
           </View>
 
@@ -377,14 +525,14 @@ const CreateConfig = () => {
             Enter number of panels:
           </Text>
           {hasPanelLock && (
-              <Text className="text-red-500 text-med self-start ml-6"> (Locked - Delete all ranges to edit)</Text>
+            <Text className="text-red-500 text-med self-start ml-6"> (Locked - Delete all ranges to edit)</Text>
           )}
 
           <View className={`mt-4 ${hasPanelLock ? 'bg-gray-200' : 'bg-medYellow'} w-11/12 h-56 py-3 rounded-3xl justify-center items-center`}>
             <Text className="text-darkPurple px-14 pb-2 text-center font-medium">
               Enter the number of panels in the format X by Y, such as a 3x3 array. As of now, we only offer 3x1, 3x2, or 3x3 configurations.
             </Text>
-            <TextInput 
+            <TextInput
               value={x}
               onChangeText={hasPanelLock ? () => showPanelLockMessage() : setX}
               placeholder="Enter x here"
@@ -392,7 +540,7 @@ const CreateConfig = () => {
               editable={!hasPanelLock}
               style={hasPanelLock ? {color: 'gray'} : {}}
             />
-            <TextInput 
+            <TextInput
               value={y}
               onChangeText={hasPanelLock ? () => showPanelLockMessage() : setY}
               placeholder="Enter y here"
@@ -422,52 +570,115 @@ const CreateConfig = () => {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity  // AUDIO SECTION
-                      activeOpacity={isFormValid ? 0.7 : 1}
-                      className={`${isFormValid ? 'bg-lightPurple' : 'bg-gray-400'} w-96 items-center justify-center h-12 rounded-2xl mt-4`}
-                      onPress={handleAudioPress}
-                    >
-                      <View className="flex-row items-center justify-between w-full px-5">
-                        <View className="flex-1 items-center">
-                          <Text className="text-white font-medium">
-                            Choose Audio
-                          </Text>
-                        </View>
-                        <Image
-                          source={icons.plus}
-                          resizeMode="contain"
-                          tintColor="white"
-                          className="w-6 h-6"
-                        />
-                      </View>
-                    </TouchableOpacity>
+          {/* Audio Section Toggle Button */}
+          <TouchableOpacity
+            activeOpacity={isFormValid ? 0.7 : 1}
+            className={`${isFormValid ? 'bg-lightPurple' : 'bg-gray-400'} w-96 items-center justify-center h-12 rounded-2xl mt-4`}
+            onPress={() => {
+              if (isFormValid) {
+                setAudioSectionExpanded(!audioSectionExpanded);
+              } else {
+                Alert.alert(
+                  "Missing Information",
+                  "Please fill out all required fields before configuring audio.",
+                  [{ text: "OK" }]
+                );
+              }
+            }}
+          >
+            <View className="flex-row items-center justify-between w-full px-5">
+              <View className="flex-1 items-center">
+                <Text className="text-white font-medium">
+                  {hasAudio ? "Edit Audio (Optional)" : "Add Audio (Optional)"}
+                </Text>
+              </View>
+              <Image
+                source={audioSectionExpanded ? icons.up : (hasAudio ? icons.edit : icons.plus)}
+                resizeMode="contain"
+                tintColor="white"
+                className="w-6 h-6"
+              />
+            </View>
+          </TouchableOpacity>
+
+          {/* Collapsible Audio Section */}
+          {audioSectionExpanded && (
+            <View className="w-11/12 bg-medYellow mt-4 py-4 px-4 rounded-3xl">
+              <Text className="font-bold text-xl text-darkPurple mb-4">
+                Choose sounds for your sculpture
+              </Text>
+
+              <AudioSelector
+                onAudioSelected={handleAudioChange}
+                initialAudios={selectedAudio}
+                maxItems={10}
+                preset={usePresetAudio}
+              />
+
+              <View className="mt-4 bg-blue-50 p-3 rounded-lg">
+                <Text className="text-darkPurple italic text-center">
+                  {selectedAudio.length < 3
+                    ? "Please select at least 3 audio clips"
+                    : "Audio will be saved when you save the configuration"}
+                </Text>
+              </View>
+            </View>
+          )}
 
           <Text className="mt-4 font-bold text-xl self-start ml-7 text-darkPurple">Current ranges:</Text>
-        
+
           {fetchError && (<Text className="text-red-500 mt-2">{fetchError}</Text>)}
           {data && data.length > 0 ? (
             <View className="w-full">
-              {data.map(config => (
-                <ConfigRange
-                  key={config.id}
-                  id={config.id}
-                  signal={config.selectedSignal || config.setting_name} 
-                  lower_range={config.rangeValues_0 !== undefined ? config.rangeValues_0 : config.lower_range}
-                  upper_range={config.rangeValues_1 !== undefined ? config.rangeValues_1 : config.upper_range}
-                  color={config.selectedColor || config.color}
-                  onDelete={() => {
-                    handleDeleteConfig(config.id);
-                  }}
-                  onPress={() => {
-                    router.push({
-                      pathname: "/(sub-pages)/create-config-details",
-                      params: { 
-                        configId: isEditMode ? configId : null,
-                        settingId: config.id 
-                      }
-                    });
-                  }}
-                />
+              {Object.entries(
+                [...data].sort((a, b) => {
+                  // Sort by signal name first
+                  const signalA = (a.selectedSignal || a.setting_name || '').match(/^[A-Za-z]+/)?.[0] || '';
+                  const signalB = (b.selectedSignal || b.setting_name || '').match(/^[A-Za-z]+/)?.[0] || '';
+
+                  if (signalA < signalB) return -1;
+                  if (signalA > signalB) return 1;
+
+                  // Then by lower range
+                  const lowerA = a.rangeValues_0 !== undefined ? a.rangeValues_0 : a.lower_range;
+                  const lowerB = b.rangeValues_0 !== undefined ? b.rangeValues_0 : b.lower_range;
+
+                  return lowerA - lowerB;
+                }).reduce((acc, config) => {
+                  // Group by signal type
+                  const signalName = (config.selectedSignal || config.setting_name || '').match(/^[A-Za-z]+/)?.[0] || 'Other';
+                  if (!acc[signalName]) {
+                    acc[signalName] = [];
+                  }
+                  acc[signalName].push(config);
+                  return acc;
+                }, {})
+              ).map(([signalName, configs]) => (
+                <View key={signalName}>
+                  <Text className="text-lg font-bold pt-2 px-8">{signalName} ranges</Text>
+                  {configs.map(config => (
+                    <ConfigRange
+                      key={config.id}
+                      id={config.id}
+                      signal={config.selectedSignal || config.setting_name}
+                      lower_range={config.rangeValues_0 !== undefined ? config.rangeValues_0 : config.lower_range}
+                      upper_range={config.rangeValues_1 !== undefined ? config.rangeValues_1 : config.upper_range}
+                      color={config.selectedColor || config.color}
+                      onDelete={() => {
+                        handleDeleteConfig(config.id);
+                      }}
+                      onPress={() => {
+                        router.push({
+                          pathname: "/(sub-pages)/create-config-details",
+                          params: {
+                            configId: isEditMode ? configId : null,
+                            settingId: config.id
+                          }
+                        });
+                      }}
+                    />
+                  ))}
+                </View>
               ))}
             </View>
           ) : (
