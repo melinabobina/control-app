@@ -3,6 +3,7 @@
   "components": {
     "directory": "components",
     "installed": [
+      "text input",
       "text input"
     ]
   }
