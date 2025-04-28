@@ -1,10 +1,11 @@
 {
   "expo": {
-    "name": "control-app",
-    "slug": "control-app",
+    "name": "Neural Kinetic Sculpture App",
+    "slug": "neural-kinetic-sculpture-app",
+    "description": "Control app for the Neural Kinetic Sculpture. Controls the speed, direction, color, and brightness of the panels",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/square_brain.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -42,9 +43,22 @@
       "typedRoutes": true
     },
     "extra": {
-      "supabaseUrl": "ASK KATRINA ABOUT HOW TO DO ENV",
-      "supabaseKey": "ASK KATRINA ABOUT HOW TO DO ENV"
+      "supabaseUrl": "https://xtdwqdobrbsieqkhughj.supabase.co/",
+      "supabaseKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0ZHdxZG9icmJzaWVxa2h1Z2hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkxNTgzMDIsImV4cCI6MjA1NDczNDMwMn0.WIz8uR7Hq1Rwr4LNJtyP64_QoXYPSM7fxfzDbWXQGMY",
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "52dfcc5f-49c8-4526-981b-e7d01899fa5d"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/52dfcc5f-49c8-4526-981b-e7d01899fa5d"
     }
   }
 }
+
 
